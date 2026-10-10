@@ -5,6 +5,7 @@ import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.Align
@@ -16,6 +17,7 @@ import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PatternSyntax
 import com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings
+import com.medmunds.advancedfiletypes.settings.MatchResult
 import java.awt.Component
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
@@ -31,6 +33,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     private val rules = mutableListOf<FileTypeOverrideRule>()
     private val tableModel = RuleTableModel(rules)
     private val table = JBTable(tableModel)
+    internal val includeVsCodeCheckBox = JBCheckBox(MyMessageBundle.message("settings.includeVsCode"))
 
     private val testPathField = JBTextField(30)
     private val testResultLabel = JBLabel(MyMessageBundle.message("settings.test.no.path"))
@@ -74,6 +77,10 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             }
             .createPanel()
 
+        includeVsCodeCheckBox.addActionListener {
+            updateTestResult()
+        }
+
         testPathField.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent?) = updateTestResult()
             override fun removeUpdate(e: DocumentEvent?) = updateTestResult()
@@ -83,6 +90,8 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         tableModel.addTableModelListener {
             updateTestResult()
         }
+
+        reset()
 
         return panel {
             row {
@@ -94,6 +103,9 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             row {
                 cell(tablePanel).align(Align.FILL)
             }.resizableRow()
+            row {
+                cell(includeVsCodeCheckBox)
+            }
             group(MyMessageBundle.message("settings.test.group")) {
                 row(MyMessageBundle.message("settings.test.path.label")) {
                     cell(testPathField)
@@ -192,41 +204,65 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         }
 
         val fileName = path.substringAfterLast('/').substringAfterLast('\\')
-        val fileTypeManager = FileTypeManager.getInstance()
+        val settings = AdvancedFileTypeSettings.getInstance(project)
+        val matchResult = settings.evaluateMatch(
+            relativePath = path,
+            fileName = fileName,
+            effectiveRules = rules,
+            includeVsCode = includeVsCodeCheckBox.isSelected
+        )
 
-        for (rule in rules) {
-            if (rule.matches(path, fileName)) {
-                val fileType = fileTypeManager.findFileTypeByName(rule.fileTypeName)
-                if (fileType != null) {
-                    testResultLabel.text = MyMessageBundle.message(
-                        "settings.test.matched",
-                        rule.pattern,
-                        fileType.displayName,
-                        rule.fileTypeName
-                    )
-                    testResultLabel.icon = fileType.icon
-                    return
-                }
+        when (matchResult) {
+            is MatchResult.PluginRuleMatch -> {
+                testResultLabel.text = MyMessageBundle.message(
+                    "settings.test.matched",
+                    matchResult.rule.pattern,
+                    matchResult.fileType.displayName,
+                    matchResult.rule.fileTypeName
+                )
+                testResultLabel.icon = matchResult.fileType.icon
+            }
+            is MatchResult.VsCodeMatch -> {
+                testResultLabel.text = MyMessageBundle.message(
+                    "settings.test.matched.vscode",
+                    matchResult.pattern,
+                    matchResult.fileType.displayName,
+                    matchResult.fileType.name
+                )
+                testResultLabel.icon = matchResult.fileType.icon
+            }
+            is MatchResult.VsCodeUnsupportedMatch -> {
+                testResultLabel.text = MyMessageBundle.message(
+                    "settings.test.matched.vscode.unsupported",
+                    matchResult.pattern,
+                    matchResult.languageId
+                )
+                testResultLabel.icon = null
+            }
+            is MatchResult.NoMatch -> {
+                testResultLabel.text = MyMessageBundle.message("settings.test.no.match")
+                testResultLabel.icon = null
             }
         }
-
-        testResultLabel.text = MyMessageBundle.message("settings.test.no.match")
-        testResultLabel.icon = null
     }
 
     override fun isModified(): Boolean {
-        val savedRules = AdvancedFileTypeSettings.getInstance(project).getRules()
-        return rules != savedRules
+        val settings = AdvancedFileTypeSettings.getInstance(project)
+        return rules != settings.getRules() || includeVsCodeCheckBox.isSelected != settings.isLoadFromVsCodeSettings()
     }
 
     override fun apply() {
-        AdvancedFileTypeSettings.getInstance(project).setRules(rules)
+        val settings = AdvancedFileTypeSettings.getInstance(project)
+        settings.setRules(rules)
+        settings.setLoadFromVsCodeSettings(includeVsCodeCheckBox.isSelected)
     }
 
     override fun reset() {
+        val settings = AdvancedFileTypeSettings.getInstance(project)
         rules.clear()
-        rules.addAll(AdvancedFileTypeSettings.getInstance(project).getRules().map { it.copy() })
+        rules.addAll(settings.getRules().map { it.copy() })
         tableModel.fireTableDataChanged()
+        includeVsCodeCheckBox.isSelected = settings.isLoadFromVsCodeSettings()
         updateTestResult()
     }
 

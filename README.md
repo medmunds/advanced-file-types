@@ -6,9 +6,10 @@ Advanced File Types is a plugin for JetBrains IDEs that enables project-specific
 
 ### Features
 - **Project-Specific Overrides**: Define custom file type rules stored per project in `.idea/advancedFileTypes.xml`.
+- **VS Code Settings Compatibility**: Dynamically reads file associations from `.vscode/settings.json` (`files.associations`) with JSONC comment and trailing comma support.
 - **Directory and Filename Pattern Matching**: Supports both Glob (e.g. `docs/**/*.txt`, `*.custom`, `src/templates/*`) and Regular Expression syntax.
-- **Ordered Evaluation**: Rules are evaluated top-to-bottom; the first matching rule takes precedence. If no rule matches, standard IDE file type associations apply.
-- **Settings UI**: Accessible via **Settings / Preferences > Editor > File Type Matching** with add, edit, remove, reorder, and an interactive pattern testing tool.
+- **Ordered Evaluation & Precedence**: Rules are evaluated top-to-bottom: project override rules take first precedence, followed by `.vscode/settings.json` associations, falling back to standard IDE file type associations.
+- **Settings UI**: Accessible via **Settings / Preferences > Editor > File Type Matching** with add, edit, remove, reorder, VS Code associations toggle, and an interactive pattern testing tool.
 
 ## Pattern Syntax
 

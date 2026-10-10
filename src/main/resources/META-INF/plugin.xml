@@ -33,4 +33,9 @@
         <webHelpProvider implementation="com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider"/>
     </extensions>
 
+    <applicationListeners>
+        <listener class="com.medmunds.advancedfiletypes.vscode.VsCodeSettingsFileListener"
+                  topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+    </applicationListeners>
+
 </idea-plugin>

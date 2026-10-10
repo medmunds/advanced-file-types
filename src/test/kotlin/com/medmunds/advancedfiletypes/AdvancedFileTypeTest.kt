@@ -7,7 +7,11 @@ import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PatternSyntax
 import com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings
+import com.medmunds.advancedfiletypes.settings.MatchResult
 import com.medmunds.advancedfiletypes.ui.AdvancedFileTypeConfigurable
+import com.medmunds.advancedfiletypes.vscode.VsCodeAssociation
+import com.medmunds.advancedfiletypes.vscode.VsCodeLanguageResolver
+import com.medmunds.advancedfiletypes.vscode.VsCodeSettingsReader
 import org.junit.Assert
 
 class AdvancedFileTypeTest : BasePlatformTestCase() {
@@ -188,6 +192,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals("Pattern", MyMessageBundle.message("settings.table.column.pattern"))
         Assert.assertEquals("Syntax", MyMessageBundle.message("settings.table.column.syntax"))
         Assert.assertEquals("File Type", MyMessageBundle.message("settings.table.column.fileType"))
+        Assert.assertEquals("Include file associations from .vscode/settings.json", MyMessageBundle.message("settings.includeVsCode"))
         Assert.assertEquals("Glob", MyMessageBundle.message("syntax.glob"))
         Assert.assertEquals("Regex", MyMessageBundle.message("syntax.regex"))
         Assert.assertEquals("Glob", PatternSyntax.GLOB.displayName)
@@ -202,5 +207,219 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals("Please select a file type", MyMessageBundle.message("dialog.validation.fileType.empty"))
         Assert.assertEquals("HTML (HTML files)", MyMessageBundle.message("fileType.display.withDescription", "HTML", "HTML files"))
         Assert.assertTrue(MyMessageBundle.message("dialog.pattern.help").contains("Glob patterns"))
+    }
+
+    fun testVsCodeSettingsReaderJsoncParsing() {
+        val jsonc = """
+            {
+              // Comment line
+              /* Multi-line
+                 comment */
+              "editor.tabSize": 2,
+              "files.associations": {
+                "**/docs/**/*.txt": "html",
+                "*.special": "xml", // inline comment
+                "bad": 123,
+              },
+            }
+        """.trimIndent()
+
+        val parsed = VsCodeSettingsReader.parseAssociations(jsonc)
+        Assert.assertEquals(2, parsed.size)
+        Assert.assertEquals(VsCodeAssociation("**/docs/**/*.txt", "html"), parsed[0])
+        Assert.assertEquals(VsCodeAssociation("*.special", "xml"), parsed[1])
+
+        val emptyParsed = VsCodeSettingsReader.parseAssociations("")
+        Assert.assertTrue(emptyParsed.isEmpty())
+
+        val invalidParsed = VsCodeSettingsReader.parseAssociations("{ not valid json: }}")
+        Assert.assertTrue(invalidParsed.isEmpty())
+    }
+
+    @Suppress("KotlinMisorderedAssertEqualsArguments")
+    fun testVsCodeLanguageResolver() {
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        val xmlType = FileTypeManager.getInstance().findFileTypeByName("XML")
+        Assert.assertNotNull(htmlType)
+        Assert.assertNotNull(xmlType)
+
+        // Predefined aliases
+        Assert.assertEquals(htmlType, VsCodeLanguageResolver.resolveFileType("html"))
+        Assert.assertEquals(xmlType, VsCodeLanguageResolver.resolveFileType("xml"))
+        val plainTextType = FileTypeManager.getInstance().findFileTypeByName("PLAIN_TEXT")
+        Assert.assertEquals(plainTextType, VsCodeLanguageResolver.resolveFileType("plaintext"))
+
+        // Direct name matching
+        Assert.assertEquals(htmlType, VsCodeLanguageResolver.resolveFileType("HTML"))
+
+        // Unsupported language returns null
+        Assert.assertNull(VsCodeLanguageResolver.resolveFileType("unknown_nonexistent_language_id_xyz"))
+
+        // Custom mappings escape hatch
+        val customType = VsCodeLanguageResolver.resolveFileType(
+            "custom_lang",
+            mapOf("custom_lang" to "HTML")
+        )
+        Assert.assertEquals(htmlType, customType)
+    }
+
+    fun testVsCodeSettingsIntegrationAndPrecedence() {
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        val xmlType = FileTypeManager.getInstance().findFileTypeByName("XML")
+        Assert.assertNotNull(htmlType)
+        Assert.assertNotNull(xmlType)
+
+        // Create .vscode/settings.json
+        myFixture.addFileToProject(
+            ".vscode/settings.json",
+            """
+            {
+              // Project associations
+              "files.associations": {
+                "**/docs/**/*.txt": "html",
+                "*.data": "xml"
+              }
+            }
+            """.trimIndent()
+        )
+        VsCodeSettingsReader.clearCache()
+
+        val docsFile = myFixture.addFileToProject("docs/guide.txt", "content").virtualFile
+        val dataFile = myFixture.addFileToProject("src/sample.data", "<data/>").virtualFile
+        val otherFile = myFixture.addFileToProject("src/plain.txt", "plain").virtualFile
+
+        // With no plugin rules, VS Code associations take effect
+        Assert.assertEquals(htmlType, overrider.getOverriddenFileType(docsFile))
+        Assert.assertEquals(xmlType, overrider.getOverriddenFileType(dataFile))
+        Assert.assertNull(overrider.getOverriddenFileType(otherFile))
+
+        // Plugin rule takes precedence over VS Code setting
+        settings.setRules(listOf(
+            FileTypeOverrideRule("docs/*.txt", "XML", PatternSyntax.GLOB)
+        ))
+        Assert.assertEquals("Plugin rule must take precedence over VS Code setting", xmlType, overrider.getOverriddenFileType(docsFile))
+
+        // When VS Code loading is disabled via setting, VS Code associations are ignored
+        settings.setRules(emptyList())
+        settings.setLoadFromVsCodeSettings(false)
+        Assert.assertNull("VS Code settings should be ignored when disabled", overrider.getOverriddenFileType(docsFile))
+        Assert.assertNull("VS Code settings should be ignored when disabled", overrider.getOverriddenFileType(dataFile))
+
+        // Re-enable
+        settings.setLoadFromVsCodeSettings(true)
+        Assert.assertEquals(htmlType, overrider.getOverriddenFileType(docsFile))
+    }
+
+    fun testVsCodeSettingsJsonSelfOverride() {
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        val xmlType = FileTypeManager.getInstance().findFileTypeByName("XML")
+        Assert.assertNotNull(htmlType)
+        Assert.assertNotNull(xmlType)
+
+        // Create .vscode/settings.json that matches all json in .vscode/ as html
+        val settingsFile = myFixture.addFileToProject(
+            ".vscode/settings.json",
+            """
+            {
+              // Self association rule
+              "files.associations": {
+                ".vscode/**/*.json": "html",
+              }
+            }
+            """.trimIndent()
+        ).virtualFile
+        VsCodeSettingsReader.clearCache()
+
+        val otherJsonFile = myFixture.addFileToProject(".vscode/other.json", "{}").virtualFile
+
+        // Both .vscode/settings.json and .vscode/other.json should be overridden to HTML
+        Assert.assertEquals(htmlType, overrider.getOverriddenFileType(otherJsonFile))
+        Assert.assertEquals(htmlType, overrider.getOverriddenFileType(settingsFile))
+
+        // Plugin rule should also be able to override .vscode/settings.json directly
+        settings.setRules(listOf(
+            FileTypeOverrideRule(".vscode/**/*.json", "XML", PatternSyntax.GLOB)
+        ))
+        Assert.assertEquals(xmlType, overrider.getOverriddenFileType(settingsFile))
+        Assert.assertEquals(xmlType, overrider.getOverriddenFileType(otherJsonFile))
+    }
+
+    fun testVsCodeUnsupportedFileTypeGracefulFallback() {
+        myFixture.addFileToProject(
+            ".vscode/settings.json",
+            """
+            {
+              "files.associations": {
+                "docs/unsupported.txt": "unsupported_language_identifier_123",
+                "docs/*.txt": "html"
+              }
+            }
+            """.trimIndent()
+        )
+        VsCodeSettingsReader.clearCache()
+
+        val unsupportedFile = myFixture.addFileToProject("docs/unsupported.txt", "content").virtualFile
+        val otherFile = myFixture.addFileToProject("docs/other.txt", "content").virtualFile
+
+        // Unsupported rule should fall through to subsequent rule
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        Assert.assertEquals(htmlType, overrider.getOverriddenFileType(unsupportedFile))
+        Assert.assertEquals(htmlType, overrider.getOverriddenFileType(otherFile))
+    }
+
+    fun testConfigurableWithVsCodeCheckboxAndDiagnostics() {
+        myFixture.addFileToProject(
+            ".vscode/settings.json",
+            """
+            {
+              "files.associations": {
+                "docs/*.txt": "html",
+                "special/*.xyz": "unsupported_xyz_lang"
+              }
+            }
+            """.trimIndent()
+        )
+        VsCodeSettingsReader.clearCache()
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        val component = configurable.createComponent()
+        Assert.assertNotNull(component)
+
+        // Checkbox initial state
+        Assert.assertTrue(configurable.includeVsCodeCheckBox.isSelected)
+
+        // Match result evaluation for plugin rule
+        val pluginMatch = settings.evaluateMatch("docs/test.txt", "test.txt", listOf(
+            FileTypeOverrideRule("docs/*.txt", "XML", PatternSyntax.GLOB)
+        ), includeVsCode = true)
+        Assert.assertTrue(pluginMatch is MatchResult.PluginRuleMatch)
+
+        // Match result evaluation for VS Code setting
+        val vscodeMatch = settings.evaluateMatch("docs/test.txt", "test.txt", emptyList(), includeVsCode = true)
+        Assert.assertTrue(vscodeMatch is MatchResult.VsCodeMatch)
+
+        // Match result evaluation for unsupported VS Code setting
+        val unsupportedMatch = settings.evaluateMatch("special/file.xyz", "file.xyz", emptyList(), includeVsCode = true)
+        Assert.assertTrue(unsupportedMatch is MatchResult.VsCodeUnsupportedMatch)
+
+        // Match result evaluation when VS Code is disabled
+        val noMatchWhenDisabled = settings.evaluateMatch("docs/test.txt", "test.txt", emptyList(), includeVsCode = false)
+        Assert.assertTrue(noMatchWhenDisabled is MatchResult.NoMatch)
+
+        // Toggle checkbox and verify isModified
+        configurable.includeVsCodeCheckBox.isSelected = false
+        Assert.assertTrue(configurable.isModified())
+
+        configurable.apply()
+        Assert.assertFalse(settings.isLoadFromVsCodeSettings())
+
+        configurable.reset()
+        Assert.assertFalse(configurable.includeVsCodeCheckBox.isSelected)
+
+        settings.setLoadFromVsCodeSettings(true)
+        configurable.reset()
+        Assert.assertTrue(configurable.includeVsCodeCheckBox.isSelected)
+
+        configurable.disposeUIResources()
     }
 }
