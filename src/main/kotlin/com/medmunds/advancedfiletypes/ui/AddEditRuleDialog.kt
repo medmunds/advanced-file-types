@@ -51,11 +51,31 @@ class AddEditRuleDialog(
     }
 
     override fun createCenterPanel(): JComponent {
+        val helpText = """
+            <html>
+            <b>Glob patterns</b>
+            <ul>
+            <li><code>*</code> &ndash; Matches characters within a single directory</li>
+            <li><code>**</code> &ndash; Matches subdirectories recursively</li>
+            <li><code>?</code> &ndash; Matches any single character</li>
+            <li><code>{a,b}</code> &ndash; Alternation (e.g. <code>*.{txt,md}</code>)</li>
+            <li><code>[abc]</code>, <code>[!abc]</code> &ndash; Character class / negated class</li>
+            <li>Patterns without <code>/</code> match filename anywhere; patterns with <code>/</code> match project-relative path</li>
+            </ul>
+            <b>Regex patterns</b>
+            <ul>
+            <li>Match the full project-relative path</li>
+            <li>Use <code>.*</code> for substring / directory wildcards (e.g. <code>docs/.*\.txt</code>)</li>
+            </ul>
+            All patterns are case-insensitive
+            </html>
+        """.trimIndent()
+
         return panel {
             row("Pattern:") {
                 cell(patternField)
-                    .comment("E.g. docs/**/*.txt, *.custom, or src/templates/*")
                     .focused()
+                contextHelp(helpText)
             }
             row("Syntax:") {
                 cell(syntaxCombo)

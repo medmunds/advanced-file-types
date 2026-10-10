@@ -2,6 +2,7 @@ package com.medmunds.advancedfiletypes
 
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PatternSyntax
 import com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings
@@ -143,6 +144,11 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         val configurable = AdvancedFileTypeConfigurable(project)
         val component = configurable.createComponent()
         Assert.assertNotNull("Configurable component should not be null", component)
+        Assert.assertEquals(
+            "Configurable must declare the expected help topic ID",
+            AdvancedFileTypeWebHelpProvider.HELP_TOPIC,
+            configurable.helpTopic
+        )
 
         settings.setRules(listOf(
             FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB)
@@ -152,5 +158,26 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertFalse("Configurable should not be modified after reset", configurable.isModified())
 
         configurable.disposeUIResources()
+    }
+
+    fun testWebHelpProviderResolvesHelpUrl() {
+        val provider = AdvancedFileTypeWebHelpProvider()
+        Assert.assertEquals(AdvancedFileTypeWebHelpProvider.HELP_TOPIC_PREFIX, provider.helpTopicPrefix)
+
+        val resolvedUrl = provider.getHelpPageUrl(AdvancedFileTypeWebHelpProvider.HELP_TOPIC)
+        Assert.assertEquals(AdvancedFileTypeWebHelpProvider.README_URL, resolvedUrl)
+
+        val otherTopicUrl = provider.getHelpPageUrl("some.other.plugin.topic")
+        Assert.assertNull("Unrelated help topic should not be resolved by this provider", otherTopicUrl)
+    }
+
+    fun testAddEditRuleDialogCreationAndRuleExtraction() {
+        val rule = FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB)
+        val dialog = com.medmunds.advancedfiletypes.ui.AddEditRuleDialog(project, rule)
+        val extracted = dialog.getRule()
+        Assert.assertEquals("docs/*.txt", extracted.pattern)
+        Assert.assertEquals("HTML", extracted.fileTypeName)
+        Assert.assertEquals(PatternSyntax.GLOB, extracted.syntax)
+        dialog.disposeIfNeeded()
     }
 }

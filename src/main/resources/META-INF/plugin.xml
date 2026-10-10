@@ -30,6 +30,7 @@
                              id="com.medmunds.advancedfiletypes.settings"
                              key="settings.displayName"
                              instance="com.medmunds.advancedfiletypes.ui.AdvancedFileTypeConfigurable"/>
+        <webHelpProvider implementation="com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider"/>
     </extensions>
 
 </idea-plugin>

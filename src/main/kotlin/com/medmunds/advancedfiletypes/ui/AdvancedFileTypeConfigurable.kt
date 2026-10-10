@@ -12,6 +12,7 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.EditableModel
 import com.medmunds.advancedfiletypes.MyMessageBundle
+import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PatternSyntax
 import com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings
@@ -37,6 +38,8 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     override fun getId(): String = "com.medmunds.advancedfiletypes.settings"
 
     override fun getDisplayName(): String = MyMessageBundle.message("settings.displayName")
+
+    override fun getHelpTopic(): String = AdvancedFileTypeWebHelpProvider.HELP_TOPIC
 
     override fun createComponent(): JComponent {
         setupTable()
