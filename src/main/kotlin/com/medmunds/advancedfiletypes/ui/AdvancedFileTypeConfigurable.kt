@@ -112,16 +112,31 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
         table.columnModel.getColumn(0).apply {
             preferredWidth = 250
-            headerValue = "Pattern"
+            headerValue = MyMessageBundle.message("settings.table.column.pattern")
         }
         table.columnModel.getColumn(1).apply {
             preferredWidth = 80
             maxWidth = 100
-            headerValue = "Syntax"
+            headerValue = MyMessageBundle.message("settings.table.column.syntax")
+            cellRenderer = object : DefaultTableCellRenderer() {
+                override fun getTableCellRendererComponent(
+                    table: JTable?,
+                    value: Any?,
+                    isSelected: Boolean,
+                    hasFocus: Boolean,
+                    row: Int,
+                    column: Int
+                ): Component {
+                    val c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column) as JLabel
+                    val syntax = value as? PatternSyntax
+                    c.text = syntax?.displayName ?: (value?.toString() ?: "")
+                    return c
+                }
+            }
         }
         table.columnModel.getColumn(2).apply {
             preferredWidth = 200
-            headerValue = "File Type"
+            headerValue = MyMessageBundle.message("settings.table.column.fileType")
             cellRenderer = object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(
                     table: JTable?,
@@ -137,7 +152,11 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                     if (fileType != null) {
                         c.icon = fileType.icon
                         val desc = fileType.description
-                        c.text = if (desc.isNotBlank()) "${fileType.displayName} ($desc)" else fileType.displayName
+                        c.text = if (desc.isNotBlank()) {
+                            MyMessageBundle.message("fileType.display.withDescription", fileType.displayName, desc)
+                        } else {
+                            fileType.displayName
+                        }
                     } else {
                         c.icon = null
                         c.text = typeName

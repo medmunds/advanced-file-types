@@ -1,10 +1,14 @@
 package com.medmunds.advancedfiletypes.model
 
+import com.medmunds.advancedfiletypes.MyMessageBundle
 import java.util.regex.Pattern
 
-enum class PatternSyntax {
-    GLOB,
-    REGEX
+enum class PatternSyntax(val bundleKey: String) {
+    GLOB("syntax.glob"),
+    REGEX("syntax.regex");
+
+    val displayName: String
+        get() = MyMessageBundle.message(bundleKey)
 }
 
 object PathPatternMatcher {

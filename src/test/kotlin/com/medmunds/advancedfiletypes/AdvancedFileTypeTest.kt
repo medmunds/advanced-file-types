@@ -180,4 +180,25 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals(PatternSyntax.GLOB, extracted.syntax)
         dialog.disposeIfNeeded()
     }
+
+    fun testMessageBundleKeys() {
+        Assert.assertEquals("File Type Matching", MyMessageBundle.message("settings.displayName"))
+        Assert.assertEquals("Pattern", MyMessageBundle.message("settings.table.column.pattern"))
+        Assert.assertEquals("Syntax", MyMessageBundle.message("settings.table.column.syntax"))
+        Assert.assertEquals("File Type", MyMessageBundle.message("settings.table.column.fileType"))
+        Assert.assertEquals("Glob", MyMessageBundle.message("syntax.glob"))
+        Assert.assertEquals("Regex", MyMessageBundle.message("syntax.regex"))
+        Assert.assertEquals("Glob", PatternSyntax.GLOB.displayName)
+        Assert.assertEquals("Regex", PatternSyntax.REGEX.displayName)
+        Assert.assertEquals("Add File Type Override Rule", MyMessageBundle.message("dialog.title.add"))
+        Assert.assertEquals("Edit File Type Override Rule", MyMessageBundle.message("dialog.title.edit"))
+        Assert.assertEquals("Pattern:", MyMessageBundle.message("dialog.pattern.label"))
+        Assert.assertEquals("Syntax:", MyMessageBundle.message("dialog.syntax.label"))
+        Assert.assertEquals("File Type:", MyMessageBundle.message("dialog.fileType.label"))
+        Assert.assertEquals("Pattern cannot be empty", MyMessageBundle.message("dialog.validation.pattern.empty"))
+        Assert.assertEquals("Invalid pattern syntax: bad", MyMessageBundle.message("dialog.validation.pattern.invalid", "bad"))
+        Assert.assertEquals("Please select a file type", MyMessageBundle.message("dialog.validation.fileType.empty"))
+        Assert.assertEquals("HTML (HTML files)", MyMessageBundle.message("fileType.display.withDescription", "HTML", "HTML files"))
+        Assert.assertTrue(MyMessageBundle.message("dialog.pattern.help").contains("Glob patterns"))
+    }
 }

@@ -10,6 +10,7 @@ import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.panel
+import com.medmunds.advancedfiletypes.MyMessageBundle
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PathPatternMatcher
 import com.medmunds.advancedfiletypes.model.PatternSyntax
@@ -22,6 +23,11 @@ class AddEditRuleDialog(
 
     private val patternField = JBTextField(existingRule?.pattern ?: "", 30)
     private val syntaxCombo = ComboBox(PatternSyntax.entries.toTypedArray()).apply {
+        renderer = SimpleListCellRenderer.create { label, value, _ ->
+            if (value != null) {
+                label.text = value.displayName
+            }
+        }
         selectedItem = existingRule?.syntax ?: PatternSyntax.GLOB
     }
     private val availableFileTypes: List<FileType> = FileTypeManager.getInstance().registeredFileTypes
@@ -33,7 +39,11 @@ class AddEditRuleDialog(
             if (value != null) {
                 label.icon = value.icon
                 val desc = value.description
-                label.text = if (desc.isNotBlank()) "${value.displayName} ($desc)" else value.displayName
+                label.text = if (desc.isNotBlank()) {
+                    MyMessageBundle.message("fileType.display.withDescription", value.displayName, desc)
+                } else {
+                    value.displayName
+                }
             }
         }
         val targetName = existingRule?.fileTypeName
@@ -46,41 +56,27 @@ class AddEditRuleDialog(
     }
 
     init {
-        title = if (existingRule == null) "Add File Type Override Rule" else "Edit File Type Override Rule"
+        title = if (existingRule == null) {
+            MyMessageBundle.message("dialog.title.add")
+        } else {
+            MyMessageBundle.message("dialog.title.edit")
+        }
         init()
     }
 
     override fun createCenterPanel(): JComponent {
-        val helpText = """
-            <html>
-            <b>Glob patterns</b>
-            <ul>
-            <li><code>*</code> &ndash; Matches characters within a single directory</li>
-            <li><code>**</code> &ndash; Matches subdirectories recursively</li>
-            <li><code>?</code> &ndash; Matches any single character</li>
-            <li><code>{a,b}</code> &ndash; Alternation (e.g. <code>*.{txt,md}</code>)</li>
-            <li><code>[abc]</code>, <code>[!abc]</code> &ndash; Character class / negated class</li>
-            <li>Patterns without <code>/</code> match filename anywhere; patterns with <code>/</code> match project-relative path</li>
-            </ul>
-            <b>Regex patterns</b>
-            <ul>
-            <li>Match the full project-relative path</li>
-            <li>Use <code>.*</code> for substring / directory wildcards (e.g. <code>docs/.*\.txt</code>)</li>
-            </ul>
-            All patterns are case-insensitive
-            </html>
-        """.trimIndent()
+        val helpText = MyMessageBundle.message("dialog.pattern.help")
 
         return panel {
-            row("Pattern:") {
+            row(MyMessageBundle.message("dialog.pattern.label")) {
                 cell(patternField)
                     .focused()
                 contextHelp(helpText)
             }
-            row("Syntax:") {
+            row(MyMessageBundle.message("dialog.syntax.label")) {
                 cell(syntaxCombo)
             }
-            row("File Type:") {
+            row(MyMessageBundle.message("dialog.fileType.label")) {
                 cell(fileTypeCombo)
             }
         }
@@ -89,16 +85,16 @@ class AddEditRuleDialog(
     override fun doValidate(): ValidationInfo? {
         val pattern = patternField.text.trim()
         if (pattern.isEmpty()) {
-            return ValidationInfo("Pattern cannot be empty", patternField)
+            return ValidationInfo(MyMessageBundle.message("dialog.validation.pattern.empty"), patternField)
         }
         val syntax = syntaxCombo.selectedItem as? PatternSyntax ?: PatternSyntax.GLOB
         try {
             PathPatternMatcher.compile(pattern, syntax)
         } catch (e: Exception) {
-            return ValidationInfo("Invalid pattern syntax: ${e.message}", patternField)
+            return ValidationInfo(MyMessageBundle.message("dialog.validation.pattern.invalid", e.message ?: ""), patternField)
         }
         if (fileTypeCombo.selectedItem == null) {
-            return ValidationInfo("Please select a file type", fileTypeCombo)
+            return ValidationInfo(MyMessageBundle.message("dialog.validation.fileType.empty"), fileTypeCombo)
         }
         return null
     }
