@@ -8,7 +8,6 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.SimpleListCellRenderer
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.panel
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
@@ -46,8 +45,6 @@ class AddEditRuleDialog(
         }
     }
 
-    private val enabledCheckBox = JBCheckBox("Enabled", existingRule?.isEnabled ?: true)
-
     init {
         title = if (existingRule == null) "Add File Type Override Rule" else "Edit File Type Override Rule"
         init()
@@ -65,9 +62,6 @@ class AddEditRuleDialog(
             }
             row("File Type:") {
                 cell(fileTypeCombo)
-            }
-            row {
-                cell(enabledCheckBox)
             }
         }
     }
@@ -93,12 +87,10 @@ class AddEditRuleDialog(
         val pattern = patternField.text.trim()
         val syntax = syntaxCombo.selectedItem as? PatternSyntax ?: PatternSyntax.GLOB
         val fileType = fileTypeCombo.selectedItem as FileType
-        val isEnabled = enabledCheckBox.isSelected
         return FileTypeOverrideRule(
             pattern = pattern,
             fileTypeName = fileType.name,
-            syntax = syntax,
-            isEnabled = isEnabled
+            syntax = syntax
         )
     }
 }

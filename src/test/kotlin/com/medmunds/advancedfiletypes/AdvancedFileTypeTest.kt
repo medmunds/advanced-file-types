@@ -43,8 +43,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         val rule = FileTypeOverrideRule(
             pattern = "docs/*.txt",
             fileTypeName = "HTML",
-            syntax = PatternSyntax.GLOB,
-            isEnabled = true
+            syntax = PatternSyntax.GLOB
         )
         settings.setRules(listOf(rule))
 
@@ -67,32 +66,44 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         // Rule 1: docs/**/*.txt -> HTML
         // Rule 2: docs/*.txt -> XML
         settings.setRules(listOf(
-            FileTypeOverrideRule("docs/**/*.txt", "HTML", PatternSyntax.GLOB, true),
-            FileTypeOverrideRule("docs/*.txt", "XML", PatternSyntax.GLOB, true)
+            FileTypeOverrideRule("docs/**/*.txt", "HTML", PatternSyntax.GLOB),
+            FileTypeOverrideRule("docs/*.txt", "XML", PatternSyntax.GLOB)
         ))
 
         Assert.assertEquals("First rule should win", htmlFileType, overrider.getOverriddenFileType(docsFile))
 
         // Swap order
         settings.setRules(listOf(
-            FileTypeOverrideRule("docs/*.txt", "XML", PatternSyntax.GLOB, true),
-            FileTypeOverrideRule("docs/**/*.txt", "HTML", PatternSyntax.GLOB, true)
+            FileTypeOverrideRule("docs/*.txt", "XML", PatternSyntax.GLOB),
+            FileTypeOverrideRule("docs/**/*.txt", "HTML", PatternSyntax.GLOB)
         ))
 
         Assert.assertEquals("First rule should win after swap", xmlFileType, overrider.getOverriddenFileType(docsFile))
     }
 
-    fun testDisabledRuleIsSkipped() {
+    fun testRuleRemovalRevertsOverride() {
         val xmlFileType = FileTypeManager.getInstance().findFileTypeByName("XML")
 
         val docsFile = myFixture.addFileToProject("docs/sub/guide.txt", "content").virtualFile
 
         settings.setRules(listOf(
-            FileTypeOverrideRule("docs/**/*.txt", "HTML", PatternSyntax.GLOB, false), // disabled
-            FileTypeOverrideRule("**/*.txt", "XML", PatternSyntax.GLOB, true)          // enabled
+            FileTypeOverrideRule("docs/**/*.txt", "HTML", PatternSyntax.GLOB),
+            FileTypeOverrideRule("**/*.txt", "XML", PatternSyntax.GLOB)
         ))
 
-        Assert.assertEquals("Disabled rule should be skipped in favor of next matching rule", xmlFileType, overrider.getOverriddenFileType(docsFile))
+        // Initially matches first rule (HTML)
+        val htmlFileType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        Assert.assertEquals(htmlFileType, overrider.getOverriddenFileType(docsFile))
+
+        // When user deletes/removes the first rule, the next matching rule applies
+        settings.setRules(listOf(
+            FileTypeOverrideRule("**/*.txt", "XML", PatternSyntax.GLOB)
+        ))
+        Assert.assertEquals("Next matching rule should take effect when previous rule is removed", xmlFileType, overrider.getOverriddenFileType(docsFile))
+
+        // When all rules are removed, override returns null
+        settings.setRules(emptyList())
+        Assert.assertNull("No override should apply when all rules are deleted", overrider.getOverriddenFileType(docsFile))
     }
 
     fun testRegexPatternOverride() {
@@ -103,7 +114,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         val otherFile = myFixture.addFileToProject("config/other.txt", "text").virtualFile
 
         settings.setRules(listOf(
-            FileTypeOverrideRule("config/service-\\d+\\.cfg", "XML", PatternSyntax.REGEX, true)
+            FileTypeOverrideRule("config/service-\\d+\\.cfg", "XML", PatternSyntax.REGEX)
         ))
 
         Assert.assertEquals(xmlFileType, overrider.getOverriddenFileType(specialFile))
@@ -112,8 +123,8 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
 
     fun testSettingsStatePersistence() {
         val state = AdvancedFileTypeSettings.State()
-        state.rules.add(FileTypeOverrideRule("templates/**/*.tpl", "HTML", PatternSyntax.GLOB, true))
-        state.rules.add(FileTypeOverrideRule(".*\\.custom", "XML", PatternSyntax.REGEX, false))
+        state.rules.add(FileTypeOverrideRule("templates/**/*.tpl", "HTML", PatternSyntax.GLOB))
+        state.rules.add(FileTypeOverrideRule(".*\\.custom", "XML", PatternSyntax.REGEX))
 
         settings.loadState(state)
 
@@ -122,12 +133,10 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals("templates/**/*.tpl", loaded[0].pattern)
         Assert.assertEquals("HTML", loaded[0].fileTypeName)
         Assert.assertEquals(PatternSyntax.GLOB, loaded[0].syntax)
-        Assert.assertTrue(loaded[0].isEnabled)
 
         Assert.assertEquals(".*\\.custom", loaded[1].pattern)
         Assert.assertEquals("XML", loaded[1].fileTypeName)
         Assert.assertEquals(PatternSyntax.REGEX, loaded[1].syntax)
-        Assert.assertFalse(loaded[1].isEnabled)
     }
 
     fun testConfigurableLifecycle() {
@@ -136,7 +145,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertNotNull("Configurable component should not be null", component)
 
         settings.setRules(listOf(
-            FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB, true)
+            FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB)
         ))
 
         configurable.reset()

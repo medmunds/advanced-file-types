@@ -108,20 +108,15 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         table.setShowGrid(false)
 
         table.columnModel.getColumn(0).apply {
-            preferredWidth = 60
-            maxWidth = 80
-            headerValue = "Enabled"
-        }
-        table.columnModel.getColumn(1).apply {
             preferredWidth = 250
             headerValue = "Pattern"
         }
-        table.columnModel.getColumn(2).apply {
+        table.columnModel.getColumn(1).apply {
             preferredWidth = 80
             maxWidth = 100
             headerValue = "Syntax"
         }
-        table.columnModel.getColumn(3).apply {
+        table.columnModel.getColumn(2).apply {
             preferredWidth = 200
             headerValue = "File Type"
             cellRenderer = object : DefaultTableCellRenderer() {
@@ -178,7 +173,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         val fileTypeManager = FileTypeManager.getInstance()
 
         for (rule in rules) {
-            if (rule.isEnabled && rule.matches(path, fileName)) {
+            if (rule.matches(path, fileName)) {
                 val fileType = fileTypeManager.findFileTypeByName(rule.fileTypeName)
                 if (fileType != null) {
                     testResultLabel.text = MyMessageBundle.message(
@@ -219,37 +214,26 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
         override fun getRowCount(): Int = rules.size
 
-        override fun getColumnCount(): Int = 4
+        override fun getColumnCount(): Int = 3
 
         override fun getColumnClass(columnIndex: Int): Class<*> {
             return when (columnIndex) {
-                0 -> java.lang.Boolean.TYPE
-                1 -> String::class.java
-                2 -> PatternSyntax::class.java
-                3 -> String::class.java
+                0 -> String::class.java
+                1 -> PatternSyntax::class.java
+                2 -> String::class.java
                 else -> Any::class.java
             }
         }
 
-        override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean {
-            return columnIndex == 0
-        }
+        override fun isCellEditable(rowIndex: Int, columnIndex: Int): Boolean = false
 
         override fun getValueAt(rowIndex: Int, columnIndex: Int): Any {
             val rule = rules[rowIndex]
             return when (columnIndex) {
-                0 -> rule.isEnabled
-                1 -> rule.pattern
-                2 -> rule.syntax
-                3 -> rule.fileTypeName
+                0 -> rule.pattern
+                1 -> rule.syntax
+                2 -> rule.fileTypeName
                 else -> ""
-            }
-        }
-
-        override fun setValueAt(aValue: Any?, rowIndex: Int, columnIndex: Int) {
-            if (rowIndex in rules.indices && columnIndex == 0) {
-                rules[rowIndex].isEnabled = aValue as? Boolean ?: true
-                fireTableCellUpdated(rowIndex, columnIndex)
             }
         }
 

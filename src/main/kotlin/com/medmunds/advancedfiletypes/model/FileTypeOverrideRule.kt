@@ -14,10 +14,7 @@ data class FileTypeOverrideRule(
     var fileTypeName: String = "",
 
     @Attribute("syntax")
-    var syntax: PatternSyntax = PatternSyntax.GLOB,
-
-    @Attribute("enabled")
-    var isEnabled: Boolean = true
+    var syntax: PatternSyntax = PatternSyntax.GLOB
 ) {
     @Transient
     @Volatile
@@ -28,7 +25,7 @@ data class FileTypeOverrideRule(
     private var cachedPatternKey: String? = null
 
     fun matches(relativePath: String?, fileName: String): Boolean {
-        if (!isEnabled || pattern.isBlank()) return false
+        if (pattern.isBlank()) return false
         val p = getOrCompilePattern() ?: return false
         return PathPatternMatcher.matches(p, relativePath, fileName)
     }

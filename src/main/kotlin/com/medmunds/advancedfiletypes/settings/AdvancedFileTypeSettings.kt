@@ -86,7 +86,7 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
     fun findMatchingRule(relativePath: String?, fileName: String): Pair<FileTypeOverrideRule, FileType>? {
         val fileTypeManager = FileTypeManager.getInstance()
         for (rule in myState.rules) {
-            if (rule.isEnabled && rule.matches(relativePath, fileName)) {
+            if (rule.matches(relativePath, fileName)) {
                 val fileType = fileTypeManager.findFileTypeByName(rule.fileTypeName)
                 if (fileType != null) {
                     return Pair(rule, fileType)
