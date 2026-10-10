@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.ValidationInfo
+import com.intellij.ui.ComboboxSpeedSearch
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.panel
@@ -34,7 +35,7 @@ class AddEditRuleDialog(
         .filter { it != UnknownFileType.INSTANCE && it.name.isNotEmpty() }
         .sortedBy { it.displayName.ifBlank { it.name }.lowercase() }
 
-    private val fileTypeCombo = ComboBox(availableFileTypes.toTypedArray()).apply {
+    internal val fileTypeCombo = ComboBox(availableFileTypes.toTypedArray()).apply {
         renderer = SimpleListCellRenderer.create { label, value, _ ->
             if (value != null) {
                 label.icon = value.icon
@@ -44,6 +45,14 @@ class AddEditRuleDialog(
                 } else {
                     value.displayName
                 }
+            }
+        }
+        ComboboxSpeedSearch.installSpeedSearch(this) { fileType ->
+            val desc = fileType?.description ?: ""
+            if (desc.isNotBlank()) {
+                MyMessageBundle.message("fileType.display.withDescription", fileType?.displayName ?: "", desc)
+            } else {
+                fileType?.displayName ?: ""
             }
         }
         val targetName = existingRule?.fileTypeName

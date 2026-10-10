@@ -2,6 +2,7 @@ package com.medmunds.advancedfiletypes
 
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.speedSearch.SpeedSearchSupply
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PatternSyntax
@@ -178,6 +179,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals("docs/*.txt", extracted.pattern)
         Assert.assertEquals("HTML", extracted.fileTypeName)
         Assert.assertEquals(PatternSyntax.GLOB, extracted.syntax)
+        Assert.assertNotNull("fileTypeCombo should have SpeedSearch installed", SpeedSearchSupply.getSupply(dialog.fileTypeCombo, true))
         dialog.disposeIfNeeded()
     }
 

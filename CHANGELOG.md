@@ -9,3 +9,4 @@
 - Integration with IntelliJ file type detection via `FileTypeOverrider`.
 - Settings dialog help button support and dialog context help linking to GitHub documentation.
 - Extracted all UI strings to resource bundle for full localization support, including human-readable syntax options.
+- Added typeahead speed search (`ComboboxSpeedSearch`) on the file type selector in the rule configuration dialog.
