@@ -9,6 +9,9 @@ plugins {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
     testImplementation(libs.junit)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    testRuntimeOnly(libs.junit.platform.launcher)
 
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
     intellijPlatform {
@@ -18,4 +21,8 @@ dependencies {
         // Add plugin dependencies for compilation here, for example:
         // bundledPlugin("com.intellij.java")
     }
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

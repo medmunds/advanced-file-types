@@ -1,5 +1,10 @@
 [versions]
 junit = "4.13.2"
+junitJupiter = "5.11.4"
+junitPlatform = "1.11.4"
 
 [libraries]
 junit = { module = "junit:junit", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiter" }
+junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junitJupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junitPlatform" }
