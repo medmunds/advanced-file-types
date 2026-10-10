@@ -1,7 +1,7 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-    <id>com.medmunds.advancedfiletypes.advanced-file-types</id>
+    <id>com.medmunds.advancedfiletypes</id>
 
     <!-- Public plugin name should be written in Title Case.
      Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
@@ -25,8 +25,12 @@
     <!-- Extensions defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="MyToolWindow" factoryClass="com.medmunds.advancedfiletypes.MyToolWindowFactory"
-                    icon="AllIcons.Toolwindows.ToolWindowPalette"/>
+        <projectService serviceImplementation="com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings"/>
+        <fileTypeOverrider implementation="com.medmunds.advancedfiletypes.AdvancedFileTypeOverrider"/>
+        <projectConfigurable parentId="editor"
+                             id="com.medmunds.advancedfiletypes.settings"
+                             displayName="File Type Matching"
+                             instance="com.medmunds.advancedfiletypes.ui.AdvancedFileTypeConfigurable"/>
     </extensions>
 
 </idea-plugin>
