@@ -65,11 +65,15 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
             if (rel != null) return rel
         }
 
-        if (!project.isDisposed) {
-            val contentRoot = ProjectFileIndex.getInstance(project).getContentRootForFile(file)
-            if (contentRoot != null) {
-                val rel = VfsUtilCore.getRelativePath(file, contentRoot, '/')
-                if (rel != null) return rel
+        if (!project.isDisposed && project.isInitialized && !project.isDefault) {
+            try {
+                val contentRoot = ProjectFileIndex.getInstance(project).getContentRootForFile(file)
+                if (contentRoot != null) {
+                    val rel = VfsUtilCore.getRelativePath(file, contentRoot, '/')
+                    if (rel != null) return rel
+                }
+            } catch (_: Throwable) {
+                // Ignore index/model errors during early startup or background checks
             }
         }
 

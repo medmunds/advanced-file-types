@@ -25,11 +25,10 @@
     <!-- Extensions defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <projectService serviceImplementation="com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings"/>
         <fileTypeOverrider implementation="com.medmunds.advancedfiletypes.AdvancedFileTypeOverrider"/>
         <projectConfigurable parentId="editor"
                              id="com.medmunds.advancedfiletypes.settings"
-                             displayName="File Type Matching"
+                             key="settings.displayName"
                              instance="com.medmunds.advancedfiletypes.ui.AdvancedFileTypeConfigurable"/>
     </extensions>
 

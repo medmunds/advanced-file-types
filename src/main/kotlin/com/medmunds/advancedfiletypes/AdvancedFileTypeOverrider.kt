@@ -12,7 +12,7 @@ class AdvancedFileTypeOverrider : FileTypeOverrider {
             return null
         }
         val project = ProjectLocator.getInstance().guessProjectForFile(file)
-        if (project == null || project.isDisposed || !project.isInitialized) {
+        if (project == null || project.isDisposed || !project.isInitialized || project.isDefault) {
             return null
         }
         val settings = AdvancedFileTypeSettings.getInstance(project)
