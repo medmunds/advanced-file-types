@@ -3,15 +3,19 @@ package com.medmunds.advancedfiletypes.ui
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.Align
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.EditableModel
+import com.intellij.util.ui.JBUI
 import com.medmunds.advancedfiletypes.MyMessageBundle
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
@@ -19,10 +23,13 @@ import com.medmunds.advancedfiletypes.model.PatternSyntax
 import com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings
 import com.medmunds.advancedfiletypes.settings.MatchResult
 import java.awt.Component
+import java.awt.Dimension
 import java.awt.event.MouseEvent
+import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JTable
+import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.table.AbstractTableModel
@@ -35,8 +42,31 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     private val table = JBTable(tableModel)
     internal val includeVsCodeCheckBox = JBCheckBox(MyMessageBundle.message("settings.includeVsCode"))
 
-    private val testPathField = JBTextField(30)
-    private val testResultLabel = JBLabel(MyMessageBundle.message("settings.test.no.path"))
+    internal val testPathField = JBTextField(30)
+    internal val testResultLabel = object : JBLabel() {
+        init {
+            verticalAlignment = SwingConstants.TOP
+        }
+
+        override fun getPreferredSize(): Dimension {
+            val size = super.getPreferredSize()
+            val fm = getFontMetrics(font)
+            val lineHeight = fm?.height ?: JBUI.scale(16)
+            val twoLinesHeight = lineHeight * 2 + insets.top + insets.bottom
+            val iconHeight = (icon?.iconHeight ?: 0) + insets.top + insets.bottom
+            val targetHeight = maxOf(twoLinesHeight, iconHeight)
+            return Dimension(0, maxOf(size.height, targetHeight))
+        }
+
+        override fun getMinimumSize(): Dimension {
+            val fm = getFontMetrics(font)
+            val lineHeight = fm?.height ?: JBUI.scale(16)
+            val twoLinesHeight = lineHeight * 2 + insets.top + insets.bottom
+            val iconHeight = (icon?.iconHeight ?: 0) + insets.top + insets.bottom
+            val targetHeight = maxOf(twoLinesHeight, iconHeight)
+            return Dimension(0, targetHeight)
+        }
+    }
 
     override fun getId(): String = "com.medmunds.advancedfiletypes.settings"
 
@@ -113,6 +143,8 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 }
                 row(MyMessageBundle.message("settings.test.result.label")) {
                     cell(testResultLabel)
+                        .align(AlignX.FILL)
+                        .align(AlignY.TOP)
                 }
             }
         }
@@ -195,11 +227,15 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         }.installOn(table)
     }
 
+    private fun setResult(text: String, icon: Icon? = null) {
+        testResultLabel.text = if (text.isBlank()) "" else "<html>${StringUtil.escapeXmlEntities(text)}</html>"
+        testResultLabel.icon = icon
+    }
+
     private fun updateTestResult() {
         val path = testPathField.text.trim()
         if (path.isEmpty()) {
-            testResultLabel.text = MyMessageBundle.message("settings.test.no.path")
-            testResultLabel.icon = null
+            setResult("")
             return
         }
 
@@ -214,34 +250,38 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
         when (matchResult) {
             is MatchResult.PluginRuleMatch -> {
-                testResultLabel.text = MyMessageBundle.message(
-                    "settings.test.matched",
-                    matchResult.rule.pattern,
-                    matchResult.fileType.displayName,
-                    matchResult.rule.fileTypeName
+                setResult(
+                    MyMessageBundle.message(
+                        "settings.test.matched",
+                        matchResult.rule.pattern,
+                        matchResult.fileType.displayName,
+                        matchResult.rule.fileTypeName
+                    ),
+                    matchResult.fileType.icon
                 )
-                testResultLabel.icon = matchResult.fileType.icon
             }
             is MatchResult.VsCodeMatch -> {
-                testResultLabel.text = MyMessageBundle.message(
-                    "settings.test.matched.vscode",
-                    matchResult.pattern,
-                    matchResult.fileType.displayName,
-                    matchResult.fileType.name
+                setResult(
+                    MyMessageBundle.message(
+                        "settings.test.matched.vscode",
+                        matchResult.pattern,
+                        matchResult.fileType.displayName,
+                        matchResult.fileType.name
+                    ),
+                    matchResult.fileType.icon
                 )
-                testResultLabel.icon = matchResult.fileType.icon
             }
             is MatchResult.VsCodeUnsupportedMatch -> {
-                testResultLabel.text = MyMessageBundle.message(
-                    "settings.test.matched.vscode.unsupported",
-                    matchResult.pattern,
-                    matchResult.languageId
+                setResult(
+                    MyMessageBundle.message(
+                        "settings.test.matched.vscode.unsupported",
+                        matchResult.pattern,
+                        matchResult.languageId
+                    )
                 )
-                testResultLabel.icon = null
             }
             is MatchResult.NoMatch -> {
-                testResultLabel.text = MyMessageBundle.message("settings.test.no.match")
-                testResultLabel.icon = null
+                setResult(MyMessageBundle.message("settings.test.no.match"))
             }
         }
     }

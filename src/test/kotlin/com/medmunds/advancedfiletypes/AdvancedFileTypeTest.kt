@@ -422,4 +422,72 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
 
         configurable.disposeUIResources()
     }
+
+    fun testConfigurablePatternTesterWrappingAndTwoLineHeight() {
+        myFixture.addFileToProject(
+            ".vscode/settings.json",
+            """
+            {
+              "files.associations": {
+                "docs/*.txt": "html"
+              }
+            }
+            """.trimIndent()
+        )
+        VsCodeSettingsReader.clearCache()
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        val component = configurable.createComponent()
+        Assert.assertNotNull(component)
+
+        val resultLabel = configurable.testResultLabel
+        Assert.assertEquals(javax.swing.SwingConstants.TOP, resultLabel.verticalAlignment)
+
+        // Preferred and minimum height should allocate space for at least 2 lines of text
+        val fontMetrics = resultLabel.getFontMetrics(resultLabel.font)
+        val twoLinesHeight = (fontMetrics?.height ?: 16) * 2
+        Assert.assertTrue(
+            "Preferred height should be at least two lines",
+            resultLabel.preferredSize.height >= twoLinesHeight
+        )
+        Assert.assertTrue(
+            "Minimum height should be at least two lines",
+            resultLabel.minimumSize.height >= twoLinesHeight
+        )
+        Assert.assertEquals(
+            "Preferred width should be 0 to avoid forcing horizontal scrolling",
+            0,
+            resultLabel.preferredSize.width
+        )
+        Assert.assertEquals(
+            "Minimum width should be 0 to avoid forcing horizontal scrolling",
+            0,
+            resultLabel.minimumSize.width
+        )
+
+        // Test matched state uses HTML wrapping and displays icon
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        configurable.testPathField.text = "docs/test.txt"
+        Assert.assertTrue("Result text should be wrapped in HTML", resultLabel.text.startsWith("<html>"))
+        Assert.assertTrue(resultLabel.text.contains("docs/*.txt"))
+        Assert.assertTrue(resultLabel.text.contains("HTML"))
+        Assert.assertEquals(htmlType?.icon, resultLabel.icon)
+
+        // Space remains allocated for two lines when text is populated
+        Assert.assertTrue(resultLabel.preferredSize.height >= twoLinesHeight)
+
+        // Test unmatched state uses HTML wrapping without icon
+        configurable.testPathField.text = "unknown/file.abc"
+        Assert.assertTrue("Unmatched result text should be wrapped in HTML", resultLabel.text.startsWith("<html>"))
+        Assert.assertNull(resultLabel.icon)
+
+        // Verify left edges of testPathField and testResultLabel are aligned
+        component.setSize(800, 600)
+        component.validate()
+        val pathPos = javax.swing.SwingUtilities.convertPoint(configurable.testPathField, 0, 0, component)
+        val resultPos = javax.swing.SwingUtilities.convertPoint(resultLabel, 0, 0, component)
+        Assert.assertEquals("Left edges of sample path input and result label should be aligned", pathPos.x, resultPos.x)
+
+        configurable.disposeUIResources()
+    }
 }

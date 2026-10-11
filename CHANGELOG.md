@@ -14,3 +14,4 @@
 
 ### Fixed
 - Allowed file type overrides to apply to `.vscode/settings.json` itself via plugin rules or self-referential associations.
+- Improved pattern matching test result display in settings by enabling multiline text wrapping, top vertical alignment, aligning column edges between input and result fields, and reserving two lines of height to prevent horizontal scrolling and layout jumps.
