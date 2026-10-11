@@ -371,6 +371,30 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals(htmlType, overrider.getOverriddenFileType(otherFile))
     }
 
+    fun testPluginRuleUnsupportedFileTypeGracefulFallback() {
+        val file = myFixture.addFileToProject("docs/config.txt", "content").virtualFile
+
+        // Rule with non-existent file type should be silently skipped
+        settings.setRules(listOf(
+            FileTypeOverrideRule("docs/*.txt", "NonExistentFileType123", PatternSyntax.GLOB)
+        ))
+        Assert.assertNull("Unsupported file type rule should be silently skipped", overrider.getOverriddenFileType(file))
+
+        // When a valid rule follows an unsupported one, the valid rule should still match
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        settings.setRules(listOf(
+            FileTypeOverrideRule("docs/*.txt", "NonExistentFileType123", PatternSyntax.GLOB),
+            FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB)
+        ))
+        Assert.assertEquals("Second valid rule should match after unsupported rule is skipped", htmlType, overrider.getOverriddenFileType(file))
+
+        // evaluateMatch should return NoMatch when all matching rules have unsupported types
+        val noMatchResult = settings.evaluateMatch("docs/config.txt", "config.txt", listOf(
+            FileTypeOverrideRule("docs/*.txt", "NonExistentFileType123", PatternSyntax.GLOB)
+        ), includeVsCode = false, includeGitAttributes = false)
+        Assert.assertTrue("Should return NoMatch when all rules reference unsupported types", noMatchResult is MatchResult.NoMatch)
+    }
+
     fun testConfigurableWithVsCodeCheckboxAndDiagnostics() {
         myFixture.addFileToProject(
             ".vscode/settings.json",
