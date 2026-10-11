@@ -1,108 +1,127 @@
-# Advanced File Types
+# Advanced File Types plugin for JetBrains IDEs
 
-## Overview
+A plugin for JetBrains IDEs that enables project-specific file type associations.
+* Treat `templates/**/*.html` as Jinja2 while leaving other `.html` files as plain HTML.
+* Handle `*.sql` as MySQL in one project and PostgreSQL in another.
+* Use file type rules from VS Code settings or GitHub Linguist associations stored with the project.
 
-Advanced File Types is a plugin for JetBrains IDEs that enables project-specific file type overrides by directory and filename patterns (such as treating all `.txt` files in `docs/` as Markdown, or matching custom naming conventions).
+## Features
 
-### Features
-- **Project-Specific Overrides**: Define custom file type rules stored per project in `.idea/advancedFileTypes.xml`.
-- **VS Code Settings Compatibility**: Dynamically reads file associations from `.vscode/settings.json` (`files.associations`) with JSONC comment and trailing comma support.
-- **Git Attributes Compatibility**: Dynamically reads `linguist-language` overrides from `.gitattributes` for GitHub Linguist language detection.
-- **Directory and Filename Pattern Matching**: Supports both Glob (e.g. `docs/**/*.txt`, `*.custom`, `src/templates/*`) and Regular Expression syntax.
-- **Ordered Evaluation & Precedence**: Rules are evaluated top-to-bottom: project override rules take first precedence, followed by `.vscode/settings.json` associations, then `.gitattributes` `linguist-language` overrides, falling back to standard IDE file type associations.
-- **Settings UI**: Accessible via **Settings / Preferences > Editor > File Type Matching** with add, edit, remove, reorder, VS Code and Git attributes toggles, and an interactive pattern testing tool.
+* **Custom pattern matching:** Define custom file type patterns using globs or regular expressions. Patterns can match filenames or full paths and are applied in the order you specify.
 
-## Pattern Syntax
+  <!-- TODO: Screenshot of the settings UI showing a few configured override rules in the table -->
 
-### Glob Patterns
+* **Per-project settings:** Rules are applied to the current project only. The IDE's global *File Types* apply if no project rule matches. Settings are stored in `.idea/advancedFileTypes.xml` and can be committed to your repo to share.
 
-Glob patterns provide a simple and expressive syntax for matching filenames and directory paths relative to the project root. All glob pattern matching is **case-insensitive**.
+* **VS Code settings compatibility:** Reads `files.associations` from `.vscode/settings.json` and applies them as file type overrides. (Optional.)
 
-#### Supported Glob Syntax
+  <!-- TODO: Cropped screenshot of the settings UI showing the VS Code integration checkbox and the pattern tester matching a `.vscode/settings.json` rule -->
 
-| Pattern | Description | Example | Matches |
-| :--- | :--- | :--- | :--- |
-| `*` | Matches any characters within a single directory level (does not match `/`). | `docs/*.txt` | `docs/readme.txt` (but not `docs/sub/readme.txt`) |
-| `**` | Matches zero or more directories / subdirectories recursively. | `docs/**/*.txt` | `docs/readme.txt`, `docs/sub/guide.txt`, `docs/a/b/c/note.txt` |
-| `?` | Matches exactly one single character (excluding `/`). | `file-?.log` | `file-1.log`, `file-a.log` (not `file-12.log`) |
-| `{a,b,...}` | Alternation: matches any one of the comma-separated choices. | `*.{txt,md}` | `file.txt`, `file.md` (not `file.html`) |
-| `[abc]`, `[0-9]` | Character class: matches any single character enclosed in brackets. | `src/test-[0-9].kt` | `src/test-1.kt`, `src/test-5.kt` |
-| `[!abc]` | Negated character class: matches any single character not enclosed in brackets. | `data-[!0-9].csv` | `data-a.csv` (not `data-1.csv`) |
+* **GitHub Linguist compatibility:** Reads `linguist-language` information from `.gitattributes` and applies it as file type overrides. (Optional.)
 
-#### Path Matching Rules for Globs
+  <!-- TODO: Cropped screenshot of the settings UI showing the gitattributes checkbox and the pattern tester matching a gitattributes rule -->
 
-- **Filename-only patterns (no `/`)**: Patterns that do not contain a slash (such as `*.txt` or `build.gradle`) match files anywhere in the project tree regardless of directory depth.
-- **Path patterns (containing `/`)**: Patterns containing a directory separator (such as `docs/*.txt`, `src/**/*.kt`, or `**/tests/*.spec.ts`) match paths relative to the project root.
-- **Leading separators**: Leading `./` and `/` are stripped and normalized (e.g. `./docs/*.txt` is treated the same as `docs/*.txt`).
-- **Path separators**: Both Windows backslashes (`\`) and Unix forward slashes (`/`) are normalized to forward slashes.
+* **Free and open source**
 
-### Regular Expressions
+## Installation
 
-Regular expression syntax offers fine-grained matching capabilities for complex naming conventions.
+The Advanced File Types plugin should work with any JetBrains IDE version 2025.3 or later.
 
-#### How Regex Patterns Are Applied
+1. Open **Settings | Plugins**
+2. Search for **Advanced File Types** in the marketplace
+3. Click **Install**
 
-- **Full relative pathname match**: Regular expressions are evaluated against the **entire project-relative path** (using normalized forward slashes `/`, without leading `/` or `./`). Regex matching requires a complete string match (equivalent to having implicit start `^` and end `$` anchors across the full relative path).
-- **Matching sub-paths or substrings**: Because regexes must match the entire path, use `.*` if you want to match anywhere in the path or match within arbitrary subdirectories (e.g. `docs/.*\.txt` or `.*service-\d+\.cfg`).
-- **Filename fallback**: If a file is not associated with a project directory (or relative path cannot be determined), the expression is evaluated against the standalone filename.
-- **Case sensitivity**: Regex matching is compiled with case-insensitivity (`Pattern.CASE_INSENSITIVE`).
+Alternatively, download the latest release from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/XXXXX-advanced-file-types).
 
-#### Regex Syntax Reference
+## Usage
 
-Regex patterns follow the standard Java regular expression syntax (`java.util.regex.Pattern`), which is the standard regex engine utilized across the IntelliJ Platform:
+Configure file type overrides in **Settings | Editor | File Type Matching**.
 
-- [Oracle Java Regular Expressions (`java.util.regex.Pattern`) Reference](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/regex/Pattern.html)
-- [JetBrains IntelliJ IDEA Regular Expressions Guide](https://www.jetbrains.com/help/idea/regular-expressions.html)
+* Use the `+` button to add a new rule, `-` to remove a rule, and arrow buttons to reorder rules. Select an existing rule and click the pencil button to edit it (or double click it in the list).
+* Use the checkboxes to enable or disable VS Code and Git attributes matching. (Both are enabled by default.)
+* The **Test Pattern Matching** section can be helpful to verify your rules work as expected.
 
-## Git Attributes Support
+The plugin applies matching rules in this order, stopping at the first match:
 
-The plugin can dynamically read `linguist-language` overrides from a project's `.gitattributes` file, allowing teams using [GitHub Linguist](https://github.com/github-linguist/linguist) language overrides to have those same file type associations automatically honored inside JetBrains IDEs.
+* Custom patterns from top to bottom
+* `.vscode/settings.json` (if enabled)
+* `.gitattributes` (if enabled)
 
-### How It Works
+If none of those match a particular file, the IDE's global rules from **Settings | Editor | File Types** apply.
 
-When enabled (by default), the plugin reads `.gitattributes` from the project root and extracts all `linguist-language` attributes. These are evaluated after plugin rules and `.vscode/settings.json` associations, using Git's **"last match wins"** semantics.
+### Glob patterns
 
-### Example
+Glob patterns support most common shell-style wildcards.
 
-```text
-# .gitattributes
-*.data linguist-language=JSON
-docs/*.txt linguist-language=Markdown
-docs/raw.txt -linguist-language
-```
+| Pattern | Matches | Example |
+| :--- | :--- | :--- |
+| `*` | Zero or more characters except `/` | `docs/*.txt` |
+| `**` | Zero or more directories recursively | `docs/**/*.txt` |
+| `?` | Exactly one character | `file-?.log` |
+| `{a,b,...}` | Alternation: a or b | `*.{txt,md}` |
+| `[abc]`, `[0-9]` | Character class | `src/test-[0-9].kt` |
+| `[!abc]` | Negated character class | `data-[!0-9].csv` |
 
-- `config.data` → JSON syntax highlighting
-- `docs/guide.txt` → Markdown syntax highlighting
-- `docs/raw.txt` → Falls back to IDE default (attribute explicitly unset)
+**Path matching rules:**
+* Glob patterns **without `/`**  match a *filename* anywhere in the project (`*.txt` matches `readme.txt` and `docs/help/faq.txt` but not `docs/intro.txt.bak`)
+* Glob patterns **with `/`** match a *path* starting at project root (`docs/*.txt` matches `docs/intro.txt` but not `readme.txt` or `public/docs/faq.txt`)
+* All matching is **case-insensitive** and backslashes are normalized to forward slashes.
+* Leading `./` and `/` are ignored in glob patterns. 
 
-### Supported Attribute Formats
+### Regular expression patterns
 
-| Format | Description |
-| :--- | :--- |
-| `linguist-language=Language` | Assign a language (e.g., `linguist-language=Python`) |
-| `linguist-language="Language"` | Quoted language name for spaces (e.g., `linguist-language="C++"`) |
-| `-linguist-language` | Unset the language override, falling back to IDE defaults |
-| `!linguist-language` | Unset the language override (same as `-linguist-language`) |
+Regex patterns are always evaluated against the *entire project-relative path,* with no leading `/` and with directory separators normalized to `/` on all platforms. A full string match is required (implicit `^...$` anchors).
 
-### Pattern Matching
+Note that regex `.*` matches *any* characters, including `/` directory separators. Use `[^/]*` to match a single pathname component.
 
-`.gitattributes` patterns use Glob syntax with these rules:
-- **Filename-only patterns** (no `/`): Match files anywhere in the project (e.g., `*.data`).
-- **Path patterns** (containing `/`): Match relative to the project root (e.g., `docs/*.txt`).
-- Patterns are **case-insensitive**.
+Regex syntax follows Java's [`java.util.regex.Pattern`][java-regex] with case-insensitive matching. See [JetBrains IntelliJ IDEA Regular Expressions Guide][jetbrains-regex] for details.
 
-### Language Resolution
+[java-regex]: https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/regex/Pattern.html
+[jetbrains-regex]: https://www.jetbrains.com/help/idea/regular-expressions.html
 
-The plugin maps GitHub Linguist language names to IntelliJ FileTypes using a static alias map for common languages (e.g., `Shell` → `Shell Script`, `reStructuredText` → `ReST`, `JSON with Comments` → `JSON5`), with dynamic fallback to installed file types by name, display name, or language ID.
+### VS Code settings and .gitattributes linguist-language support
 
-If a language is not recognized or not installed in the current IDE, the override is skipped and the file falls back to the IDE's default file type.
+VS Code file type associations are read from the `files.associations` section in `.vscode/settings.json`. (The plugin only checks the root `.vscode/settings.json` file. Multi-root workspaces are not currently supported.)
 
-### Precedence
+GitHub language IDs are read from `linguist-language` properties in the root `.gitattributes` file. (`.gitattributes` files in subdirectories are currently ignored.)
 
-`.gitattributes` overrides are evaluated in this order:
-1. **Plugin override rules** (configured in Settings UI) — highest priority
-2. **`.vscode/settings.json`** `files.associations` (if enabled)
-3. **`.gitattributes`** `linguist-language` (if enabled) — last match wins
-4. **IDE default file types** — lowest priority
+In both cases, the plugin tries to map the [VS Code language identifier][vscode-language-id] or [GitHub Linguist ID/alias][linguist-language-id] to a JetBrains file type, based on mappings built into the plugin or case-insensitive comparison to the IDE's supported file type names. (Please open an issue for incorrect or missing mappings.) If no IDE language can be determined, the plugin will ignore the rule and not override the file type.
 
-You can disable `.gitattributes` integration via the checkbox in **Settings / Preferences > Editor > File Type Matching**.
+If the mapped JetBrains file type is not supported by your IDE, the plugin will ignore the rule and not override the file type. The pattern tester will identify the file type as "unsupported in this IDE."
+
+[vscode-language-id]: https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
+
+[linguist-language-id]: https://github.com/github/linguist/blob/master/lib/linguist/languages.yml
+
+## Why this plugin?
+
+JetBrains [**File Types**][file-types-setting] associations are global to all projects, allow only filename patterns (not path matching), and don't support prioritization of rules. This is insufficient for many real-world use cases. See these JetBrains issues:
+
+* [IDEABKL-6335](https://youtrack.jetbrains.com/issue/IDEABKL-6335/Assign-file-types-not-only-globally-but-project-wide-as-well): Assign file types not only globally but project-wide as well
+* [IJPL-2316](https://youtrack.jetbrains.com/issue/IJPL-2316/Dynamic-File-Type-Patterns): Dynamic File Type Patterns
+* [IJPL-52980](https://youtrack.jetbrains.com/issue/IJPL-52980/File-Type-Association-should-use-REGEX-not-just-and-for-pattern-matching): File Type Association should use REGEX not just * and ? for pattern matching
+* [IJPL-3389](https://youtrack.jetbrains.com/issue/IJPL-3389/File-association-prioritization-for-multiple-matching-patterns): File association prioritization for multiple matching patterns
+* [IJPL-258202](https://youtrack.jetbrains.com/issue/IJPL-258202/File-type-associations-Honor-linguist-language-overrides-from-.gitattributes): File type associations: Honor linguist-language overrides from .gitattributes
+
+(JetBrains: please feel welcome to adopt, absorb, or otherwise obsolete this plugin!)
+
+[file-types-setting]: https://www.jetbrains.com/help/idea/creating-and-registering-file-types.html#configure-associations-between-filename-patterns-and-file-types
+
+## Development
+
+To install the latest development build:
+* Download `advanced-file-types-<version>.zip` from GitHub's [releases]
+* Install it under **Settings | Plugins | ⚙️ | Install plugin from disk** (see JetBrains [managing plugins][install-plugin-from-disk] docs)
+
+To build locally:
+* Clone the repository
+* Run `./gradlew check` to run the tests
+* Run `./gradlew buildPlugin` to build the plugin
+* Install the plugin from the generated `build/distributions/advanced-file-types-<version>.zip` file
+
+[releases]: https://github.com/medmunds/advanced-file-types/releases
+[install-plugin-from-disk]: https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk
+
+## License
+
+[MIT License](LICENSE)
