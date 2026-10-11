@@ -14,6 +14,9 @@ import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.xmlb.annotations.XCollection
 import com.intellij.util.xmlb.annotations.XMap
+import com.medmunds.advancedfiletypes.gitattributes.GitAttributesReader
+import com.medmunds.advancedfiletypes.gitattributes.GitAttributesRule
+import com.medmunds.advancedfiletypes.gitattributes.LinguistLanguageResolver
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PathPatternMatcher
 import com.medmunds.advancedfiletypes.model.PatternSyntax
@@ -24,6 +27,8 @@ sealed class MatchResult {
     data class PluginRuleMatch(val rule: FileTypeOverrideRule, val fileType: FileType) : MatchResult()
     data class VsCodeMatch(val pattern: String, val languageId: String, val fileType: FileType) : MatchResult()
     data class VsCodeUnsupportedMatch(val pattern: String, val languageId: String) : MatchResult()
+    data class GitAttributesMatch(val pattern: String, val language: String, val fileType: FileType) : MatchResult()
+    data class GitAttributesUnsupportedMatch(val pattern: String, val language: String) : MatchResult()
     object NoMatch : MatchResult()
 }
 
@@ -39,6 +44,8 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
         var rules: MutableList<FileTypeOverrideRule> = mutableListOf()
 
         var loadFromVsCodeSettings: Boolean = true
+
+        var loadFromGitAttributes: Boolean = true
 
         @XMap(entryTagName = "mapping", keyAttributeName = "language", valueAttributeName = "fileType")
         var customVsCodeLanguageMappings: MutableMap<String, String> = mutableMapOf()
@@ -70,6 +77,17 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
     fun setLoadFromVsCodeSettings(value: Boolean) {
         if (myState.loadFromVsCodeSettings != value) {
             myState.loadFromVsCodeSettings = value
+            notifyFileTypesChanged()
+        }
+    }
+
+    fun isLoadFromGitAttributes(): Boolean {
+        return myState.loadFromGitAttributes
+    }
+
+    fun setLoadFromGitAttributes(value: Boolean) {
+        if (myState.loadFromGitAttributes != value) {
+            myState.loadFromGitAttributes = value
             notifyFileTypesChanged()
         }
     }
@@ -109,13 +127,24 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
     }
 
     /**
-     * Evaluates a relative path and filename against plugin rules and (if enabled) VS Code associations.
+     * Resolves the relative path of a virtual file with respect to the project directory containing .gitattributes.
      */
+    fun getProjectDirRelativePath(file: VirtualFile): String? {
+        val projectDir = project.guessProjectDir() ?: return null
+        return VfsUtilCore.getRelativePath(file, projectDir, '/')
+    }
+
+    /**
+     * Evaluates a relative path and filename against plugin rules, VS Code associations, and .gitattributes.
+     */
+    @JvmOverloads
     fun evaluateMatch(
         relativePath: String?,
         fileName: String,
         effectiveRules: List<FileTypeOverrideRule> = myState.rules,
-        includeVsCode: Boolean = myState.loadFromVsCodeSettings
+        includeVsCode: Boolean = myState.loadFromVsCodeSettings,
+        includeGitAttributes: Boolean = myState.loadFromGitAttributes,
+        gitAttributesRelativePath: String? = relativePath
     ): MatchResult {
         val fileTypeManager = FileTypeManager.getInstance()
 
@@ -128,6 +157,8 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
                 }
             }
         }
+
+        var firstUnsupportedMatch: MatchResult? = null
 
         // 2. Check VS Code settings.json (files.associations) if enabled
         if (includeVsCode) {
@@ -145,14 +176,35 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
                     )
                     if (fileType != null) {
                         return MatchResult.VsCodeMatch(association.pattern, association.languageId, fileType)
-                    } else {
-                        return MatchResult.VsCodeUnsupportedMatch(association.pattern, association.languageId)
+                    } else if (firstUnsupportedMatch == null) {
+                        firstUnsupportedMatch = MatchResult.VsCodeUnsupportedMatch(association.pattern, association.languageId)
                     }
                 }
             }
         }
 
-        return MatchResult.NoMatch
+        // 3. Check .gitattributes linguist-language (last matching rule wins) if enabled
+        // Git attributes only apply to files inside the directory containing .gitattributes
+        if (includeGitAttributes && gitAttributesRelativePath != null) {
+            val gitAttributesRules = GitAttributesReader.readRules(project)
+            var lastMatchedRule: GitAttributesRule? = null
+            for (rule in gitAttributesRules) {
+                if (rule.matches(gitAttributesRelativePath, fileName)) {
+                    lastMatchedRule = rule
+                }
+            }
+            if (lastMatchedRule != null && !lastMatchedRule.isUnset && !lastMatchedRule.language.isNullOrBlank()) {
+                val language = lastMatchedRule.language
+                val fileType = LinguistLanguageResolver.resolveFileType(language)
+                if (fileType != null) {
+                    return MatchResult.GitAttributesMatch(lastMatchedRule.pattern, language, fileType)
+                } else if (firstUnsupportedMatch == null) {
+                    firstUnsupportedMatch = MatchResult.GitAttributesUnsupportedMatch(lastMatchedRule.pattern, language)
+                }
+            }
+        }
+
+        return firstUnsupportedMatch ?: MatchResult.NoMatch
     }
 
     /**
@@ -160,41 +212,23 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
      */
     fun findMatchingFileType(file: VirtualFile): FileType? {
         val relativePath = getProjectRelativePath(file)
+        val gitAttributesRelativePath = getProjectDirRelativePath(file)
         val fileName = file.name
-        val fileTypeManager = FileTypeManager.getInstance()
-
-        // 1. Plugin rules take first precedence
-        for (rule in myState.rules) {
-            if (rule.matches(relativePath, fileName)) {
-                val fileType = fileTypeManager.findFileTypeByName(rule.fileTypeName)
-                if (fileType != null) {
-                    return fileType
-                }
-            }
+        return when (val match = evaluateMatch(
+            relativePath = relativePath,
+            fileName = fileName,
+            effectiveRules = myState.rules,
+            includeVsCode = myState.loadFromVsCodeSettings,
+            includeGitAttributes = myState.loadFromGitAttributes,
+            gitAttributesRelativePath = gitAttributesRelativePath
+        )) {
+            is MatchResult.PluginRuleMatch -> match.fileType
+            is MatchResult.VsCodeMatch -> match.fileType
+            is MatchResult.GitAttributesMatch -> match.fileType
+            is MatchResult.VsCodeUnsupportedMatch,
+            is MatchResult.GitAttributesUnsupportedMatch,
+            MatchResult.NoMatch -> null
         }
-
-        // 2. VS Code settings.json associations (fallback, skipping unsupported types)
-        if (myState.loadFromVsCodeSettings) {
-            val vsCodeAssociations = VsCodeSettingsReader.readAssociations(project)
-            for (association in vsCodeAssociations) {
-                val pattern = try {
-                    PathPatternMatcher.compile(association.pattern, PatternSyntax.GLOB)
-                } catch (_: Exception) {
-                    null
-                }
-                if (pattern != null && PathPatternMatcher.matches(pattern, relativePath, fileName)) {
-                    val fileType = VsCodeLanguageResolver.resolveFileType(
-                        association.languageId,
-                        myState.customVsCodeLanguageMappings
-                    )
-                    if (fileType != null) {
-                        return fileType
-                    }
-                }
-            }
-        }
-
-        return null
     }
 
     companion object {

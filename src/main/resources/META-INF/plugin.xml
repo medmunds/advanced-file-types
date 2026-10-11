@@ -36,6 +36,8 @@
     <applicationListeners>
         <listener class="com.medmunds.advancedfiletypes.vscode.VsCodeSettingsFileListener"
                   topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+        <listener class="com.medmunds.advancedfiletypes.gitattributes.GitAttributesFileListener"
+                  topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
     </applicationListeners>
 
 </idea-plugin>

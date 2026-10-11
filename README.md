@@ -7,9 +7,10 @@ Advanced File Types is a plugin for JetBrains IDEs that enables project-specific
 ### Features
 - **Project-Specific Overrides**: Define custom file type rules stored per project in `.idea/advancedFileTypes.xml`.
 - **VS Code Settings Compatibility**: Dynamically reads file associations from `.vscode/settings.json` (`files.associations`) with JSONC comment and trailing comma support.
+- **Git Attributes Compatibility**: Dynamically reads `linguist-language` overrides from `.gitattributes` for GitHub Linguist language detection.
 - **Directory and Filename Pattern Matching**: Supports both Glob (e.g. `docs/**/*.txt`, `*.custom`, `src/templates/*`) and Regular Expression syntax.
-- **Ordered Evaluation & Precedence**: Rules are evaluated top-to-bottom: project override rules take first precedence, followed by `.vscode/settings.json` associations, falling back to standard IDE file type associations.
-- **Settings UI**: Accessible via **Settings / Preferences > Editor > File Type Matching** with add, edit, remove, reorder, VS Code associations toggle, and an interactive pattern testing tool.
+- **Ordered Evaluation & Precedence**: Rules are evaluated top-to-bottom: project override rules take first precedence, followed by `.vscode/settings.json` associations, then `.gitattributes` `linguist-language` overrides, falling back to standard IDE file type associations.
+- **Settings UI**: Accessible via **Settings / Preferences > Editor > File Type Matching** with add, edit, remove, reorder, VS Code and Git attributes toggles, and an interactive pattern testing tool.
 
 ## Pattern Syntax
 
@@ -52,3 +53,56 @@ Regex patterns follow the standard Java regular expression syntax (`java.util.re
 
 - [Oracle Java Regular Expressions (`java.util.regex.Pattern`) Reference](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/regex/Pattern.html)
 - [JetBrains IntelliJ IDEA Regular Expressions Guide](https://www.jetbrains.com/help/idea/regular-expressions.html)
+
+## Git Attributes Support
+
+The plugin can dynamically read `linguist-language` overrides from a project's `.gitattributes` file, allowing teams using [GitHub Linguist](https://github.com/github-linguist/linguist) language overrides to have those same file type associations automatically honored inside JetBrains IDEs.
+
+### How It Works
+
+When enabled (by default), the plugin reads `.gitattributes` from the project root and extracts all `linguist-language` attributes. These are evaluated after plugin rules and `.vscode/settings.json` associations, using Git's **"last match wins"** semantics.
+
+### Example
+
+```text
+# .gitattributes
+*.data linguist-language=JSON
+docs/*.txt linguist-language=Markdown
+docs/raw.txt -linguist-language
+```
+
+- `config.data` → JSON syntax highlighting
+- `docs/guide.txt` → Markdown syntax highlighting
+- `docs/raw.txt` → Falls back to IDE default (attribute explicitly unset)
+
+### Supported Attribute Formats
+
+| Format | Description |
+| :--- | :--- |
+| `linguist-language=Language` | Assign a language (e.g., `linguist-language=Python`) |
+| `linguist-language="Language"` | Quoted language name for spaces (e.g., `linguist-language="C++"`) |
+| `-linguist-language` | Unset the language override, falling back to IDE defaults |
+| `!linguist-language` | Unset the language override (same as `-linguist-language`) |
+
+### Pattern Matching
+
+`.gitattributes` patterns use Glob syntax with these rules:
+- **Filename-only patterns** (no `/`): Match files anywhere in the project (e.g., `*.data`).
+- **Path patterns** (containing `/`): Match relative to the project root (e.g., `docs/*.txt`).
+- Patterns are **case-insensitive**.
+
+### Language Resolution
+
+The plugin maps GitHub Linguist language names to IntelliJ FileTypes using a static alias map for common languages (e.g., `Shell` → `Shell Script`, `reStructuredText` → `ReST`, `JSON with Comments` → `JSON5`), with dynamic fallback to installed file types by name, display name, or language ID.
+
+If a language is not recognized or not installed in the current IDE, the override is skipped and the file falls back to the IDE's default file type.
+
+### Precedence
+
+`.gitattributes` overrides are evaluated in this order:
+1. **Plugin override rules** (configured in Settings UI) — highest priority
+2. **`.vscode/settings.json`** `files.associations` (if enabled)
+3. **`.gitattributes`** `linguist-language` (if enabled) — last match wins
+4. **IDE default file types** — lowest priority
+
+You can disable `.gitattributes` integration via the checkbox in **Settings / Preferences > Editor > File Type Matching**.

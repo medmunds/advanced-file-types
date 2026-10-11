@@ -1,8 +1,12 @@
 package com.medmunds.advancedfiletypes
 
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileTypes.FileTypeManager
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.speedSearch.SpeedSearchSupply
+import com.medmunds.advancedfiletypes.gitattributes.GitAttributesReader
+import com.medmunds.advancedfiletypes.gitattributes.GitAttributesRule
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PatternSyntax
@@ -489,5 +493,389 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals("Left edges of sample path input and result label should be aligned", pathPos.x, resultPos.x)
 
         configurable.disposeUIResources()
+    }
+
+    fun testGitAttributesReaderIntegration() {
+        GitAttributesReader.clearCache()
+
+        // Initially without .gitattributes
+        Assert.assertNull(GitAttributesReader.findGitAttributesFile(project))
+        Assert.assertTrue(GitAttributesReader.readRules(project).isEmpty())
+
+        // Add .gitattributes to project
+        myFixture.addFileToProject(
+            ".gitattributes",
+            """
+            # Git attributes config
+            *.data linguist-language=JSON
+            docs/*.txt linguist-language=Markdown
+            raw/* -linguist-language
+            """.trimIndent()
+        )
+
+        val file = GitAttributesReader.findGitAttributesFile(project)
+        Assert.assertNotNull(file)
+        Assert.assertEquals(".gitattributes", file?.name)
+
+        val rules = GitAttributesReader.readRules(project)
+        Assert.assertEquals(3, rules.size)
+        Assert.assertEquals(GitAttributesRule("*.data", "JSON", isUnset = false), rules[0])
+        Assert.assertEquals(GitAttributesRule("docs/*.txt", "Markdown", isUnset = false), rules[1])
+        Assert.assertEquals(GitAttributesRule("raw/*", null, isUnset = true), rules[2])
+
+        // Verify caching returns same instance
+        val cachedRules = GitAttributesReader.readRules(project)
+        Assert.assertSame("Cached rules instance should be reused on same modification stamp", rules, cachedRules)
+        Assert.assertTrue(GitAttributesReader.isCached(file!!.path))
+
+        // Modify .gitattributes file on disk/VFS; verify stamp update triggers re-parsing without explicit clearCache
+        WriteCommandAction.runWriteCommandAction(project) {
+            VfsUtil.saveText(file, "*.updated linguist-language=Kotlin\n")
+        }
+
+        val updatedRules = GitAttributesReader.readRules(project)
+        Assert.assertEquals(1, updatedRules.size)
+        Assert.assertEquals(GitAttributesRule("*.updated", "Kotlin", isUnset = false), updatedRules[0])
+        Assert.assertNotSame(rules, updatedRules)
+
+        // Path-specific cache invalidation
+        Assert.assertTrue(GitAttributesReader.isCached(file.path))
+        GitAttributesReader.clearCache("other/path")
+        Assert.assertTrue("Unrelated clearCache path should not evict file", GitAttributesReader.isCached(file.path))
+
+        GitAttributesReader.clearCache(file.path)
+        Assert.assertFalse("Targeted clearCache should evict file from cache", GitAttributesReader.isCached(file.path))
+
+        // Re-read repopulates cache
+        val reReadRules = GitAttributesReader.readRules(project)
+        Assert.assertEquals(1, reReadRules.size)
+        Assert.assertTrue(GitAttributesReader.isCached(file.path))
+
+        // Clear all cache
+        GitAttributesReader.clearCache(null)
+        Assert.assertFalse(GitAttributesReader.isCached(file.path))
+    }
+
+    fun testGitAttributesLinguistLanguageOverride() {
+        val jsonType = FileTypeManager.getInstance().findFileTypeByName("JSON")
+        Assert.assertNotNull(jsonType)
+
+        myFixture.addFileToProject(
+            ".gitattributes",
+            "*.data linguist-language=JSON\n"
+        )
+        GitAttributesReader.clearCache()
+
+        val dataFile = myFixture.addFileToProject("src/payload.data", "{}").virtualFile
+        val overridden = overrider.getOverriddenFileType(dataFile)
+        Assert.assertEquals("payload.data should be overridden as JSON via .gitattributes", jsonType, overridden)
+    }
+
+    fun testGitAttributesLastMatchWinsAndNegation() {
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        val xmlType = FileTypeManager.getInstance().findFileTypeByName("XML")
+        Assert.assertNotNull(htmlType)
+        Assert.assertNotNull(xmlType)
+
+        myFixture.addFileToProject(
+            ".gitattributes",
+            """
+            *.txt linguist-language=HTML
+            docs/*.txt linguist-language=XML
+            docs/raw.txt -linguist-language
+            """.trimIndent()
+        )
+        GitAttributesReader.clearCache()
+
+        val rootText = myFixture.addFileToProject("readme.txt", "text").virtualFile
+        val docsGuide = myFixture.addFileToProject("docs/guide.txt", "text").virtualFile
+        val docsRaw = myFixture.addFileToProject("docs/raw.txt", "text").virtualFile
+
+        Assert.assertEquals("readme.txt should match *.txt (HTML)", htmlType, overrider.getOverriddenFileType(rootText))
+        Assert.assertEquals("docs/guide.txt should match docs/*.txt (XML, last match wins)", xmlType, overrider.getOverriddenFileType(docsGuide))
+        Assert.assertNull("docs/raw.txt was unset with -linguist-language and should fall back to default", overrider.getOverriddenFileType(docsRaw))
+    }
+
+    fun testPrecedencePluginOverVsCodeOverGitAttributes() {
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        val xmlType = FileTypeManager.getInstance().findFileTypeByName("XML")
+        val jsonType = FileTypeManager.getInstance().findFileTypeByName("JSON")
+        Assert.assertNotNull(htmlType)
+        Assert.assertNotNull(xmlType)
+        Assert.assertNotNull(jsonType)
+
+        // 1. .gitattributes sets *.custom -> JSON
+        myFixture.addFileToProject(
+            ".gitattributes",
+            "*.custom linguist-language=JSON\n"
+        )
+        GitAttributesReader.clearCache()
+
+        // 2. .vscode/settings.json sets *.custom -> XML
+        myFixture.addFileToProject(
+            ".vscode/settings.json",
+            """
+            {
+              "files.associations": {
+                "*.custom": "xml"
+              }
+            }
+            """.trimIndent()
+        )
+        VsCodeSettingsReader.clearCache()
+
+        val customFile = myFixture.addFileToProject("sample.custom", "<content/>").virtualFile
+
+        // With no plugin rule, VS Code association takes precedence over .gitattributes
+        Assert.assertEquals("VS Code association should override .gitattributes", xmlType, overrider.getOverriddenFileType(customFile))
+
+        // When VS Code is disabled, .gitattributes takes effect
+        settings.setLoadFromVsCodeSettings(false)
+        Assert.assertEquals(".gitattributes should apply when VS Code is disabled", jsonType, overrider.getOverriddenFileType(customFile))
+
+        // When a plugin rule is added, plugin rule takes highest precedence
+        settings.setRules(listOf(FileTypeOverrideRule("*.custom", "HTML", PatternSyntax.GLOB)))
+        Assert.assertEquals("Plugin rule should have highest precedence", htmlType, overrider.getOverriddenFileType(customFile))
+
+        // Re-enable VS Code settings, plugin rule still wins
+        settings.setLoadFromVsCodeSettings(true)
+        Assert.assertEquals("Plugin rule still wins when VS Code is re-enabled", htmlType, overrider.getOverriddenFileType(customFile))
+    }
+
+    fun testGitAttributesDisabledViaSettings() {
+        val jsonType = FileTypeManager.getInstance().findFileTypeByName("JSON")
+        Assert.assertNotNull(jsonType)
+
+        myFixture.addFileToProject(
+            ".gitattributes",
+            "*.data linguist-language=JSON\n"
+        )
+        GitAttributesReader.clearCache()
+
+        val dataFile = myFixture.addFileToProject("sample.data", "{}").virtualFile
+        Assert.assertEquals(jsonType, overrider.getOverriddenFileType(dataFile))
+
+        settings.setLoadFromGitAttributes(false)
+        Assert.assertNull("When loadFromGitAttributes is false, .gitattributes should not override", overrider.getOverriddenFileType(dataFile))
+
+        settings.setLoadFromGitAttributes(true)
+        Assert.assertEquals(jsonType, overrider.getOverriddenFileType(dataFile))
+    }
+
+    fun testGitAttributesUnsupportedLanguageGracefulFallback() {
+        myFixture.addFileToProject(
+            ".gitattributes",
+            "*.xyz linguist-language=CompletelyUnsupportedLanguageXYZ\n"
+        )
+        GitAttributesReader.clearCache()
+
+        val xyzFile = myFixture.addFileToProject("sample.xyz", "data").virtualFile
+        Assert.assertNull("Unsupported linguist language should fall through to default without error", overrider.getOverriddenFileType(xyzFile))
+
+        val match = settings.evaluateMatch("sample.xyz", "sample.xyz", includeGitAttributes = true)
+        Assert.assertTrue("evaluateMatch should return GitAttributesUnsupportedMatch", match is MatchResult.GitAttributesUnsupportedMatch)
+        val unsupported = match as MatchResult.GitAttributesUnsupportedMatch
+        Assert.assertEquals("*.xyz", unsupported.pattern)
+        Assert.assertEquals("CompletelyUnsupportedLanguageXYZ", unsupported.language)
+    }
+
+    fun testGitAttributesFileListenerLiveChanges() {
+        val jsonType = FileTypeManager.getInstance().findFileTypeByName("JSON")
+        val xmlType = FileTypeManager.getInstance().findFileTypeByName("XML")
+        Assert.assertNotNull(jsonType)
+        Assert.assertNotNull(xmlType)
+
+        val gitAttrPsi = myFixture.addFileToProject(
+            ".gitattributes",
+            "*.payload linguist-language=JSON\n"
+        )
+        val gitAttrVirtualFile = gitAttrPsi.virtualFile
+        val payloadFile = myFixture.addFileToProject("test.payload", "data").virtualFile
+
+        Assert.assertEquals("Initial .gitattributes gives JSON", jsonType, overrider.getOverriddenFileType(payloadFile))
+
+        // Modify .gitattributes content
+        WriteCommandAction.runWriteCommandAction(project) {
+            VfsUtil.saveText(gitAttrVirtualFile, "*.payload linguist-language=XML\n")
+        }
+
+        Assert.assertEquals("Modified .gitattributes dynamically gives XML", xmlType, overrider.getOverriddenFileType(payloadFile))
+
+        // Delete .gitattributes file
+        WriteCommandAction.runWriteCommandAction(project) {
+            gitAttrVirtualFile.delete(this)
+        }
+
+        Assert.assertNull("Deleted .gitattributes removes override", overrider.getOverriddenFileType(payloadFile))
+    }
+
+    fun testVsCodeUnsupportedFallsThroughToGitAttributes() {
+        val jsonType = FileTypeManager.getInstance().findFileTypeByName("JSON")
+        Assert.assertNotNull(jsonType)
+
+        // VS Code maps *.data to unsupported language
+        myFixture.addFileToProject(
+            ".vscode/settings.json",
+            """
+            {
+              "files.associations": {
+                "*.data": "unsupported-unknown-lang"
+              }
+            }
+            """.trimIndent()
+        )
+        VsCodeSettingsReader.clearCache()
+
+        // .gitattributes maps *.data to JSON
+        myFixture.addFileToProject(
+            ".gitattributes",
+            "*.data linguist-language=JSON\n"
+        )
+        GitAttributesReader.clearCache()
+
+        val dataFile = myFixture.addFileToProject("sample.data", "{}").virtualFile
+
+        // Both findMatchingFileType and evaluateMatch should fall through to GitAttributes
+        Assert.assertEquals("Overrider should fall through from unsupported VS Code to GitAttributes", jsonType, overrider.getOverriddenFileType(dataFile))
+
+        val match = settings.evaluateMatch("sample.data", "sample.data", includeVsCode = true, includeGitAttributes = true)
+        Assert.assertTrue("evaluateMatch should fall through and return GitAttributesMatch", match is MatchResult.GitAttributesMatch)
+        val gitMatch = match as MatchResult.GitAttributesMatch
+        Assert.assertEquals("*.data", gitMatch.pattern)
+        Assert.assertEquals("JSON", gitMatch.language)
+        Assert.assertEquals(jsonType, gitMatch.fileType)
+    }
+
+    fun testGitAttributesOnlyAppliesWithinProject() {
+        val jsonType = FileTypeManager.getInstance().findFileTypeByName("JSON")
+        Assert.assertNotNull(jsonType)
+
+        myFixture.addFileToProject(
+            ".gitattributes",
+            "*.data linguist-language=JSON\n"
+        )
+        GitAttributesReader.clearCache()
+
+        // When relativePath is null (outside project), .gitattributes does not apply
+        val matchOutside = settings.evaluateMatch(null, "sample.data", includeGitAttributes = true)
+        Assert.assertEquals("Files outside project should not match gitattributes", MatchResult.NoMatch, matchOutside)
+
+        val lightFile = com.intellij.testFramework.LightVirtualFile("sample.data", "{}")
+        Assert.assertNull("Virtual files outside project root should not match gitattributes", overrider.getOverriddenFileType(lightFile))
+    }
+
+    fun testGitAttributesListenerNotifiesOnlyOnRootGitAttributes() {
+        val topic = FileTypeManager.TOPIC
+        var notificationCount = 0
+        val connection = com.intellij.openapi.application.ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+        connection.subscribe(topic, object : com.intellij.openapi.fileTypes.FileTypeListener {
+            override fun fileTypesChanged(event: com.intellij.openapi.fileTypes.FileTypeEvent) {
+                notificationCount++
+            }
+        })
+
+        val gitAttrPsi = myFixture.addFileToProject(
+            ".gitattributes",
+            "*.payload linguist-language=JSON\n"
+        )
+        val gitAttrVirtualFile = gitAttrPsi.virtualFile
+
+        val countAfterAdd = notificationCount
+
+        // 1. Modifying root .gitattributes should trigger notification
+        WriteCommandAction.runWriteCommandAction(project) {
+            VfsUtil.saveText(gitAttrVirtualFile, "*.payload linguist-language=XML\n")
+        }
+        Assert.assertTrue("Notification count should increase after root .gitattributes change", notificationCount > countAfterAdd)
+
+        // 2. Modifying a nested .gitattributes (e.g. sub/.gitattributes) should NOT trigger notification
+        val nestedGitAttr = myFixture.addFileToProject("sub/.gitattributes", "*.txt text\n").virtualFile
+        val countAfterNestedCreate = notificationCount
+
+        WriteCommandAction.runWriteCommandAction(project) {
+            VfsUtil.saveText(nestedGitAttr, "*.txt linguist-language=JSON\n")
+        }
+        Assert.assertEquals("Nested .gitattributes change should NOT trigger fileTypesChanged notification", countAfterNestedCreate, notificationCount)
+    }
+
+    fun testGitAttributesCheckboxLifecycle() {
+        // Verify default state is enabled
+        Assert.assertTrue("GitAttributes should be enabled by default", settings.isLoadFromGitAttributes())
+
+        // Disable via settings
+        settings.setLoadFromGitAttributes(false)
+        Assert.assertFalse("GitAttributes should be disabled", settings.isLoadFromGitAttributes())
+
+        // Re-enable
+        settings.setLoadFromGitAttributes(true)
+        Assert.assertTrue("GitAttributes should be re-enabled", settings.isLoadFromGitAttributes())
+
+        // Verify persistence through getState/loadState
+        val state = settings.state
+        Assert.assertTrue("State should persist enabled value", state.loadFromGitAttributes)
+
+        settings.setLoadFromGitAttributes(false)
+        val disabledState = settings.state
+        Assert.assertFalse("State should persist disabled value", disabledState.loadFromGitAttributes)
+    }
+
+    fun testGitAttributesLiveTesterWithCheckbox() {
+        myFixture.addFileToProject(
+            ".gitattributes",
+            "*.data linguist-language=JSON\n"
+        )
+        GitAttributesReader.clearCache()
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        configurable.reset()
+
+        // Verify checkbox is checked by default
+        Assert.assertTrue("GitAttributes checkbox should be checked by default", configurable.includeGitAttributesCheckBox.isSelected)
+
+        // Test with checkbox enabled - should match
+        configurable.testPathField.text = "test.data"
+        configurable.updateTestResult()
+        Assert.assertTrue(
+            "Test result should show gitattributes match when enabled",
+            configurable.testResultLabel.text.contains("JSON", true) ||
+            configurable.testResultLabel.text.contains(".gitattributes", true)
+        )
+
+        // Disable checkbox and verify no match
+        configurable.includeGitAttributesCheckBox.isSelected = false
+        configurable.updateTestResult()
+        Assert.assertTrue(
+            "Test result should show no match when gitattributes is disabled",
+            configurable.testResultLabel.text.contains("No override", true) ||
+            configurable.testResultLabel.text.contains("default", true)
+        )
+
+        // Re-enable and verify match again
+        configurable.includeGitAttributesCheckBox.isSelected = true
+        configurable.updateTestResult()
+        Assert.assertTrue(
+            "Test result should show gitattributes match when re-enabled",
+            configurable.testResultLabel.text.contains("JSON", true) ||
+            configurable.testResultLabel.text.contains(".gitattributes", true)
+        )
+
+        configurable.disposeUIResources()
+    }
+
+    fun testGitAttributesEvaluateMatchToggle() {
+        myFixture.addFileToProject(
+            ".gitattributes",
+            "*.data linguist-language=JSON\n"
+        )
+        GitAttributesReader.clearCache()
+
+        // With gitattributes enabled
+        val matchEnabled = settings.evaluateMatch("test.data", "test.data", includeGitAttributes = true)
+        Assert.assertTrue("Should match when gitattributes enabled", matchEnabled is MatchResult.GitAttributesMatch)
+
+        // With gitattributes disabled
+        val matchDisabled = settings.evaluateMatch("test.data", "test.data", includeGitAttributes = false)
+        Assert.assertEquals("Should not match when gitattributes disabled", MatchResult.NoMatch, matchDisabled)
     }
 }

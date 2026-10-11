@@ -41,6 +41,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     private val tableModel = RuleTableModel(rules)
     private val table = JBTable(tableModel)
     internal val includeVsCodeCheckBox = JBCheckBox(AdvancedFileTypesBundle.message("settings.includeVsCode"))
+    internal val includeGitAttributesCheckBox = JBCheckBox(AdvancedFileTypesBundle.message("settings.includeGitAttributes"))
 
     internal val testPathField = JBTextField(30)
     internal val testResultLabel = object : JBLabel() {
@@ -111,6 +112,10 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             updateTestResult()
         }
 
+        includeGitAttributesCheckBox.addActionListener {
+            updateTestResult()
+        }
+
         testPathField.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent?) = updateTestResult()
             override fun removeUpdate(e: DocumentEvent?) = updateTestResult()
@@ -135,6 +140,9 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             }.resizableRow()
             row {
                 cell(includeVsCodeCheckBox)
+            }
+            row {
+                cell(includeGitAttributesCheckBox)
             }
             group(AdvancedFileTypesBundle.message("settings.test.group")) {
                 row(AdvancedFileTypesBundle.message("settings.test.path.label")) {
@@ -232,7 +240,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         testResultLabel.icon = icon
     }
 
-    private fun updateTestResult() {
+    internal fun updateTestResult() {
         val path = testPathField.text.trim()
         if (path.isEmpty()) {
             setResult("")
@@ -245,7 +253,8 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             relativePath = path,
             fileName = fileName,
             effectiveRules = rules,
-            includeVsCode = includeVsCodeCheckBox.isSelected
+            includeVsCode = includeVsCodeCheckBox.isSelected,
+            includeGitAttributes = includeGitAttributesCheckBox.isSelected
         )
 
         when (matchResult) {
@@ -280,6 +289,26 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                     )
                 )
             }
+            is MatchResult.GitAttributesMatch -> {
+                setResult(
+                    AdvancedFileTypesBundle.message(
+                        "settings.test.matched.gitattributes",
+                        matchResult.pattern,
+                        matchResult.fileType.displayName,
+                        matchResult.fileType.name
+                    ),
+                    matchResult.fileType.icon
+                )
+            }
+            is MatchResult.GitAttributesUnsupportedMatch -> {
+                setResult(
+                    AdvancedFileTypesBundle.message(
+                        "settings.test.matched.gitattributes.unsupported",
+                        matchResult.pattern,
+                        matchResult.language
+                    )
+                )
+            }
             is MatchResult.NoMatch -> {
                 setResult(AdvancedFileTypesBundle.message("settings.test.no.match"))
             }
@@ -288,13 +317,16 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
     override fun isModified(): Boolean {
         val settings = AdvancedFileTypeSettings.getInstance(project)
-        return rules != settings.getRules() || includeVsCodeCheckBox.isSelected != settings.isLoadFromVsCodeSettings()
+        return rules != settings.getRules() 
+            || includeVsCodeCheckBox.isSelected != settings.isLoadFromVsCodeSettings()
+            || includeGitAttributesCheckBox.isSelected != settings.isLoadFromGitAttributes()
     }
 
     override fun apply() {
         val settings = AdvancedFileTypeSettings.getInstance(project)
         settings.setRules(rules)
         settings.setLoadFromVsCodeSettings(includeVsCodeCheckBox.isSelected)
+        settings.setLoadFromGitAttributes(includeGitAttributesCheckBox.isSelected)
     }
 
     override fun reset() {
@@ -303,6 +335,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         rules.addAll(settings.getRules().map { it.copy() })
         tableModel.fireTableDataChanged()
         includeVsCodeCheckBox.isSelected = settings.isLoadFromVsCodeSettings()
+        includeGitAttributesCheckBox.isSelected = settings.isLoadFromGitAttributes()
         updateTestResult()
     }
 
