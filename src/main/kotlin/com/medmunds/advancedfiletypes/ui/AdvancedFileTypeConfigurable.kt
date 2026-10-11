@@ -16,7 +16,7 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.EditableModel
 import com.intellij.util.ui.JBUI
-import com.medmunds.advancedfiletypes.MyMessageBundle
+import com.medmunds.advancedfiletypes.AdvancedFileTypesBundle
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PatternSyntax
@@ -40,7 +40,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     private val rules = mutableListOf<FileTypeOverrideRule>()
     private val tableModel = RuleTableModel(rules)
     private val table = JBTable(tableModel)
-    internal val includeVsCodeCheckBox = JBCheckBox(MyMessageBundle.message("settings.includeVsCode"))
+    internal val includeVsCodeCheckBox = JBCheckBox(AdvancedFileTypesBundle.message("settings.includeVsCode"))
 
     internal val testPathField = JBTextField(30)
     internal val testResultLabel = object : JBLabel() {
@@ -70,7 +70,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
     override fun getId(): String = "com.medmunds.advancedfiletypes.settings"
 
-    override fun getDisplayName(): String = MyMessageBundle.message("settings.displayName")
+    override fun getDisplayName(): String = AdvancedFileTypesBundle.message("settings.displayName")
 
     override fun getHelpTopic(): String = AdvancedFileTypeWebHelpProvider.HELP_TOPIC
 
@@ -125,10 +125,10 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
         return panel {
             row {
-                label(MyMessageBundle.message("settings.description"))
+                label(AdvancedFileTypesBundle.message("settings.description"))
             }
             row {
-                comment(MyMessageBundle.message("settings.explanation"))
+                comment(AdvancedFileTypesBundle.message("settings.explanation"))
             }
             row {
                 cell(tablePanel).align(Align.FILL)
@@ -136,12 +136,12 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             row {
                 cell(includeVsCodeCheckBox)
             }
-            group(MyMessageBundle.message("settings.test.group")) {
-                row(MyMessageBundle.message("settings.test.path.label")) {
+            group(AdvancedFileTypesBundle.message("settings.test.group")) {
+                row(AdvancedFileTypesBundle.message("settings.test.path.label")) {
                     cell(testPathField)
-                        .comment(MyMessageBundle.message("settings.test.path.comment"))
+                        .comment(AdvancedFileTypesBundle.message("settings.test.path.comment"))
                 }
-                row(MyMessageBundle.message("settings.test.result.label")) {
+                row(AdvancedFileTypesBundle.message("settings.test.result.label")) {
                     cell(testResultLabel)
                         .align(AlignX.FILL)
                         .align(AlignY.TOP)
@@ -156,12 +156,12 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
         table.columnModel.getColumn(0).apply {
             preferredWidth = 250
-            headerValue = MyMessageBundle.message("settings.table.column.pattern")
+            headerValue = AdvancedFileTypesBundle.message("settings.table.column.pattern")
         }
         table.columnModel.getColumn(1).apply {
             preferredWidth = 80
             maxWidth = 100
-            headerValue = MyMessageBundle.message("settings.table.column.syntax")
+            headerValue = AdvancedFileTypesBundle.message("settings.table.column.syntax")
             cellRenderer = object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(
                     table: JTable?,
@@ -180,7 +180,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         }
         table.columnModel.getColumn(2).apply {
             preferredWidth = 200
-            headerValue = MyMessageBundle.message("settings.table.column.fileType")
+            headerValue = AdvancedFileTypesBundle.message("settings.table.column.fileType")
             cellRenderer = object : DefaultTableCellRenderer() {
                 override fun getTableCellRendererComponent(
                     table: JTable?,
@@ -197,7 +197,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                         c.icon = fileType.icon
                         val desc = fileType.description
                         c.text = if (desc.isNotBlank()) {
-                            MyMessageBundle.message("fileType.display.withDescription", fileType.displayName, desc)
+                            AdvancedFileTypesBundle.message("fileType.display.withDescription", fileType.displayName, desc)
                         } else {
                             fileType.displayName
                         }
@@ -251,7 +251,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         when (matchResult) {
             is MatchResult.PluginRuleMatch -> {
                 setResult(
-                    MyMessageBundle.message(
+                    AdvancedFileTypesBundle.message(
                         "settings.test.matched",
                         matchResult.rule.pattern,
                         matchResult.fileType.displayName,
@@ -262,7 +262,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             }
             is MatchResult.VsCodeMatch -> {
                 setResult(
-                    MyMessageBundle.message(
+                    AdvancedFileTypesBundle.message(
                         "settings.test.matched.vscode",
                         matchResult.pattern,
                         matchResult.fileType.displayName,
@@ -273,7 +273,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             }
             is MatchResult.VsCodeUnsupportedMatch -> {
                 setResult(
-                    MyMessageBundle.message(
+                    AdvancedFileTypesBundle.message(
                         "settings.test.matched.vscode.unsupported",
                         matchResult.pattern,
                         matchResult.languageId
@@ -281,7 +281,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 )
             }
             is MatchResult.NoMatch -> {
-                setResult(MyMessageBundle.message("settings.test.no.match"))
+                setResult(AdvancedFileTypesBundle.message("settings.test.no.match"))
             }
         }
     }

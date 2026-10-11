@@ -1,6 +1,6 @@
 package com.medmunds.advancedfiletypes.model
 
-import com.medmunds.advancedfiletypes.MyMessageBundle
+import com.medmunds.advancedfiletypes.AdvancedFileTypesBundle
 import java.util.regex.Pattern
 
 enum class PatternSyntax(val bundleKey: String) {
@@ -8,7 +8,7 @@ enum class PatternSyntax(val bundleKey: String) {
     REGEX("syntax.regex");
 
     val displayName: String
-        get() = MyMessageBundle.message(bundleKey)
+        get() = AdvancedFileTypesBundle.message(bundleKey)
 }
 
 object PathPatternMatcher {
