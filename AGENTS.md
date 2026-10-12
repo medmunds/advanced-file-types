@@ -124,6 +124,12 @@ Launches a test IDE instance with the plugin enabled:
    Whenever rule settings or external association files change, call `AdvancedFileTypeSettings.notifyFileTypesChanged()` (which triggers `FileTypeManagerEx.getInstance().fireFileTypesChanged()`) so open editors update their syntax highlighting.
 7. **Dynamic Loading Compatibility:**
    Ensure all newly introduced services, listeners, and extensions remain compatible with dynamic plugin loading (no memory leaks on project closing or plugin unloading).
-8. **Testing Expectations:**
-   - Always verify pattern matching additions with parameterized unit tests in `PathPatternMatcherTest`.
-   - Run `./gradlew check` before completing any code changes.
+8. **Testing & Regression Expectations:**
+   - **Bug Fixes & Regression Coverage:** Always add regression tests when fixing bugs to ensure issues do not recur.
+   - **Focused Test Cases:** Keep test cases atomic and focused on a single behavior or scenario; avoid compound test cases.
+   - **Test Layering:** Do not duplicate unit-level tests at the integration or platform level unless there is a specific reason or interaction that warrants it.
+   - **Pattern Matching:** Always verify pattern matching additions with parameterized unit tests in `PathPatternMatcherTest`.
+   - **Verification:** Run `./gradlew check` before completing any code changes.
+9. **Documentation Currency (`AGENTS.md` & `README.md`):**
+   - Keep `AGENTS.md` up to date. Update this document for any significant architectural decisions, component changes, or modifications that would otherwise leave the documentation inaccurate or misleading.
+   - Update `README.md` in concert with any changes that affect user-facing features, configuration options, workflows, or supported behavior.
