@@ -228,10 +228,7 @@ object PathPatternMatcher {
             ?.removePrefix("./")
             ?.removePrefix("/")
 
-        if (normalizedRelative != null && pattern.matcher(normalizedRelative).matches()) {
-            return true
-        }
-
-        return pattern.matcher(fileName).matches()
+        val target = normalizedRelative ?: fileName
+        return pattern.matcher(target).matches()
     }
 }

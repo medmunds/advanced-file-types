@@ -153,6 +153,23 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertNull(overrider.getOverriddenFileType(otherFile))
     }
 
+    fun testRegexNegativeLookaheadOverride() {
+        val xmlFileType = FileTypeManager.getInstance().findFileTypeByName("XML")
+        Assert.assertNotNull(xmlFileType)
+
+        val publicFile = myFixture.addFileToProject("public/index.html", "<html/>").virtualFile
+        val srcFile = myFixture.addFileToProject("src/index.html", "<html/>").virtualFile
+        val rootFile = myFixture.addFileToProject("index.html", "<html/>").virtualFile
+
+        settings.setRules(listOf(
+            FileTypeOverrideRule("(?!public/).+\\.html", "XML", PatternSyntax.REGEX)
+        ))
+
+        Assert.assertNull("public/index.html should not match negative lookahead rule", overrider.getOverriddenFileType(publicFile))
+        Assert.assertEquals("src/index.html should match negative lookahead rule", xmlFileType, overrider.getOverriddenFileType(srcFile))
+        Assert.assertEquals("index.html should match negative lookahead rule", xmlFileType, overrider.getOverriddenFileType(rootFile))
+    }
+
     fun testSettingsStatePersistence() {
         val state = AdvancedFileTypeSettings.State()
         state.rules.add(FileTypeOverrideRule("templates/**/*.tpl", "HTML", PatternSyntax.GLOB))

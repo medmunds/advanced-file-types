@@ -146,13 +146,72 @@ class PathPatternMatcherTest {
         assertEquals(expectedMatch, result)
     }
 
-    @ParameterizedTest(name = "Regex filename fallback: pattern=''{0}'', path=''{1}'', file=''{2}'' -> {3}")
+    @ParameterizedTest(name = "Regex path matching: pattern=''{0}'', path=''{1}'', file=''{2}'' -> {3}")
     @CsvSource(
-        "'^Dockerfile$', 'sub/Dockerfile', 'Dockerfile', true",
-        "'^Dockerfile$', 'sub/other/Dockerfile', 'Dockerfile', true",
-        "'^Dockerfile$', 'sub/Dockerfile.bak', 'Dockerfile.bak', false"
+        "'^Dockerfile$', 'Dockerfile', 'Dockerfile', true",
+        "'^Dockerfile$', 'sub/Dockerfile', 'Dockerfile', false",
+        "'^Dockerfile$', 'sub/other/Dockerfile', 'Dockerfile', false",
+        "'(?:.*/)?Dockerfile', 'sub/Dockerfile', 'Dockerfile', true",
+        "'^sub/.*', 'sub/Dockerfile', 'Dockerfile', true",
+        "'^sub/.*', 'other/Dockerfile', 'Dockerfile', false"
     )
-    fun testRegexFilenameFallback(patternText: String, relativePath: String, fileName: String, expectedMatch: Boolean) {
+    fun testRegexPathMatching(patternText: String, relativePath: String, fileName: String, expectedMatch: Boolean) {
+        val pattern = PathPatternMatcher.compile(patternText, PatternSyntax.REGEX)
+        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
+        assertEquals(expectedMatch, result)
+    }
+
+    @ParameterizedTest(name = "Regex negative lookahead: pattern=''{0}'', path=''{1}'', file=''{2}'' -> {3}")
+    @CsvSource(
+        "'(?!public/).+\\.html', 'public/index.html', 'index.html', false",
+        "'(?!public/).+\\.html', 'src/index.html', 'index.html', true",
+        "'(?!public/).+\\.html', 'index.html', 'index.html', true",
+        "'^(?!public/).+\\.html$', 'public/index.html', 'index.html', false",
+        "'^(?!public/).+\\.html$', 'src/index.html', 'index.html', true",
+        "'^(?!public/).+\\.html$', 'index.html', 'index.html', true"
+    )
+    fun testRegexNegativeLookahead(patternText: String, relativePath: String, fileName: String, expectedMatch: Boolean) {
+        val pattern = PathPatternMatcher.compile(patternText, PatternSyntax.REGEX)
+        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
+        assertEquals(expectedMatch, result)
+    }
+
+    @ParameterizedTest(name = "Regex fallback on fileName when relativePath is null: pattern=''{0}'', file=''{1}'' -> {2}")
+    @CsvSource(
+        "'^Dockerfile$', 'Dockerfile', true",
+        "'^Dockerfile$', 'Dockerfile.bak', false",
+        "'(?!public/).+\\.html', 'index.html', true"
+    )
+    fun testRegexNullRelativePathFallback(patternText: String, fileName: String, expectedMatch: Boolean) {
+        val pattern = PathPatternMatcher.compile(patternText, PatternSyntax.REGEX)
+        val result = PathPatternMatcher.matches(pattern, null, fileName)
+        assertEquals(expectedMatch, result)
+    }
+
+    @ParameterizedTest(name = "Regex case-insensitivity: pattern=''{0}'', path=''{1}'', file=''{2}'' -> {3}")
+    @CsvSource(
+        "'docs/.*\\.TXT', 'docs/readme.txt', 'readme.txt', true",
+        "'DOCS/.*\\.txt', 'docs/readme.txt', 'readme.txt', true",
+        "'docs/.*\\.txt', 'DOCS/README.TXT', 'README.TXT', true",
+        "'docs/.*\\.txt', 'docs/readme.md', 'readme.md', false"
+    )
+    fun testRegexCaseInsensitivity(patternText: String, relativePath: String, fileName: String, expectedMatch: Boolean) {
+        val pattern = PathPatternMatcher.compile(patternText, PatternSyntax.REGEX)
+        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
+        assertEquals(expectedMatch, result)
+    }
+
+    @ParameterizedTest(name = "Regex path normalization (Windows separators, leading slash and ./): pattern=''{0}'', path=''{1}'', file=''{2}'' -> {3}")
+    @CsvSource(
+        "'docs/.*\\.txt', 'docs/file.txt', 'file.txt', true",
+        "'docs/.*\\.txt', '/docs/file.txt', 'file.txt', true",
+        "'docs/.*\\.txt', './docs/file.txt', 'file.txt', true",
+        "'docs/.*\\.txt', 'docs\\file.txt', 'file.txt', true",
+        "'docs/.*\\.txt', 'docs\\sub\\file.txt', 'file.txt', true",
+        "'docs/sub/.*\\.txt', 'docs\\sub\\file.txt', 'file.txt', true",
+        "'docs/.*\\.txt', 'src\\sub\\file.txt', 'file.txt', false"
+    )
+    fun testRegexPathNormalization(patternText: String, relativePath: String, fileName: String, expectedMatch: Boolean) {
         val pattern = PathPatternMatcher.compile(patternText, PatternSyntax.REGEX)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
         assertEquals(expectedMatch, result)
