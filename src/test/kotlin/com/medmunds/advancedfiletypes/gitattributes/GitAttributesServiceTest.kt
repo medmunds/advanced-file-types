@@ -149,9 +149,20 @@ class GitAttributesServiceTest : BasePlatformTestCase() {
         Assert.assertEquals("JSON", service.getLanguage("sample.foo"))
         Assert.assertTrue(service.isCached("sample.foo"))
 
-        // Trigger listener
+        // Trigger listener on a background thread without read action (simulating VcsRepositoryManager)
         val listener = GitRepositoryEventListener(project)
-        listener.mappingChanged()
+        var backgroundError: Throwable? = null
+        val thread = Thread({
+            try {
+                listener.mappingChanged()
+            } catch (t: Throwable) {
+                backgroundError = t
+            }
+        }, "Test-VcsRepoManager-Thread")
+        thread.start()
+        thread.join()
+
+        Assert.assertNull("Listener on background thread should not throw read action exception", backgroundError)
 
         // Cache should be cleared
         Assert.assertFalse("Cache should be cleared after mapping change event", service.isCached("sample.foo"))

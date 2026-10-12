@@ -1,5 +1,7 @@
 package com.medmunds.advancedfiletypes.settings
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
@@ -10,6 +12,7 @@ import com.intellij.openapi.fileTypes.ex.FileTypeManagerEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.roots.ProjectFileIndex
+import com.intellij.openapi.util.Condition
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.xmlb.annotations.XCollection
@@ -92,12 +95,7 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
     }
 
     fun notifyFileTypesChanged() {
-        if (!project.isDisposed) {
-            val fileTypeManager = FileTypeManager.getInstance()
-            if (fileTypeManager is FileTypeManagerEx) {
-                fileTypeManager.fireFileTypesChanged()
-            }
-        }
+        notifyFileTypesChanged(project)
     }
 
     /**
@@ -228,12 +226,23 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
             return project.getService(AdvancedFileTypeSettings::class.java)
         }
 
-        fun notifyFileTypesChanged(project: Project) {
-            if (!project.isDisposed) {
+        fun notifyFileTypesChanged(project: Project? = null) {
+            if (project != null && (project.isDisposed || !project.isInitialized)) return
+            val app = ApplicationManager.getApplication() ?: return
+            val isExpired = Condition<Any?> {
+                project != null && (project.isDisposed || !project.isInitialized)
+            }
+            val runnable = Runnable {
+                if (isExpired.value(null)) return@Runnable
                 val fileTypeManager = FileTypeManager.getInstance()
                 if (fileTypeManager is FileTypeManagerEx) {
                     fileTypeManager.fireFileTypesChanged()
                 }
+            }
+            if (app.isDispatchThread) {
+                runnable.run()
+            } else {
+                app.invokeLater(runnable, ModalityState.defaultModalityState(), isExpired)
             }
         }
     }

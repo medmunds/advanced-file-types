@@ -1,7 +1,5 @@
 package com.medmunds.advancedfiletypes.gitattributes
 
-import com.intellij.openapi.fileTypes.FileTypeManager
-import com.intellij.openapi.fileTypes.ex.FileTypeManagerEx
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
@@ -50,10 +48,7 @@ class GitAttributesFileListener : BulkFileListener {
         }
 
         if (shouldNotify) {
-            val fileTypeManager = FileTypeManager.getInstance()
-            if (fileTypeManager is FileTypeManagerEx) {
-                fileTypeManager.fireFileTypesChanged()
-            }
+            AdvancedFileTypeSettings.notifyFileTypesChanged()
         }
     }
 
