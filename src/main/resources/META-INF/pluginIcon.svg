@@ -1,53 +1,18 @@
 <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-        <linearGradient id="paint0_linear" x1="12.3" y1="15.3" x2="37.7" y2="27.7" gradientUnits="userSpaceOnUse">
-            <stop offset="0.15937" stop-color="#3BEA62"/>
-            <stop offset="0.5404" stop-color="#3C99CC"/>
-            <stop offset="0.93739" stop-color="#6B57FF"/>
-        </linearGradient>
-        <mask id="bottom-file-mask">
-            <rect width="40" height="40" fill="white"/>
-            <!-- Cutout top file plus 1px gap clearance (stroke-width="4" = 2px path stroke + 2*1px gap) -->
-            <path d="M 10 4 H 21 L 27 10 V 29 A 2 2 0 0 1 25 31 H 10 A 2 2 0 0 1 8 29 V 6 A 2 2 0 0 1 10 4 Z" fill="black" stroke="black" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-        </mask>
-        <mask id="files-asterisk-clip-mask">
-            <rect width="40" height="40" fill="white"/>
-            <!-- Clearance cutouts around the two horizontally aligned asterisks (clearance = 2px) -->
-            <!-- Left asterisk cutout (cx=18.5, cy=21.5, r=6.2, bar_w=2.8) -->
-            <rect x="10.3" y="18.1" width="16.4" height="6.8" rx="3.4" transform="rotate(0 18.5 21.5)" fill="black"/>
-            <rect x="10.3" y="18.1" width="16.4" height="6.8" rx="3.4" transform="rotate(60 18.5 21.5)" fill="black"/>
-            <rect x="10.3" y="18.1" width="16.4" height="6.8" rx="3.4" transform="rotate(120 18.5 21.5)" fill="black"/>
-            <!-- Right asterisk cutout (cx=31.5, cy=21.5, r=6.2, bar_w=2.8) -->
-            <rect x="23.3" y="18.1" width="16.4" height="6.8" rx="3.4" transform="rotate(0 31.5 21.5)" fill="black"/>
-            <rect x="23.3" y="18.1" width="16.4" height="6.8" rx="3.4" transform="rotate(60 31.5 21.5)" fill="black"/>
-            <rect x="23.3" y="18.1" width="16.4" height="6.8" rx="3.4" transform="rotate(120 31.5 21.5)" fill="black"/>
-        </mask>
-    </defs>
-
-    <!-- Stacked file outlines clipped to not touch asterisks -->
-    <g mask="url(#files-asterisk-clip-mask)">
-        <!-- Bottom file outline (stacked below and offset to the left and bottom, clipped with 1px gap from top file) -->
-        <g mask="url(#bottom-file-mask)">
-            <path d="M 5 9 H 16 L 22 15 V 34 A 2 2 0 0 1 20 36 H 5 A 2 2 0 0 1 3 34 V 11 A 2 2 0 0 1 5 9 Z" stroke="#9AA0B0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-            <path d="M 16 9 V 15 H 22" stroke="#9AA0B0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        </g>
-
-        <!-- Top file outline with dogeared corner and rounded corners -->
-        <g>
-            <path d="M 10 4 H 21 L 27 10 V 29 A 2 2 0 0 1 25 31 H 10 A 2 2 0 0 1 8 29 V 6 A 2 2 0 0 1 10 4 Z" stroke="#6C707E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-            <path d="M 21 4 V 10 H 27" stroke="#6C707E" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        </g>
-    </g>
-
-    <!-- Two globbing asterisks (**) horizontally aligned with gradient -->
-    <g id="asterisks" fill="url(#paint0_linear)">
-        <!-- Left asterisk -->
-        <rect x="12.3" y="20.1" width="12.4" height="2.8" rx="1.4" transform="rotate(0 18.5 21.5)"/>
-        <rect x="12.3" y="20.1" width="12.4" height="2.8" rx="1.4" transform="rotate(60 18.5 21.5)"/>
-        <rect x="12.3" y="20.1" width="12.4" height="2.8" rx="1.4" transform="rotate(120 18.5 21.5)"/>
-        <!-- Right asterisk (breaking through the right border) -->
-        <rect x="25.3" y="20.1" width="12.4" height="2.8" rx="1.4" transform="rotate(0 31.5 21.5)"/>
-        <rect x="25.3" y="20.1" width="12.4" height="2.8" rx="1.4" transform="rotate(60 31.5 21.5)"/>
-        <rect x="25.3" y="20.1" width="12.4" height="2.8" rx="1.4" transform="rotate(120 31.5 21.5)"/>
-    </g>
+  <defs>
+    <linearGradient id="paint0_linear" x1="12.3" y1="15.3" x2="37.7" y2="27.7" gradientUnits="userSpaceOnUse">
+      <stop offset="0.15937" stop-color="#3BEA62"/>
+      <stop offset="0.5404" stop-color="#3C99CC"/>
+      <stop offset="0.93739" stop-color="#6B57FF"/>
+    </linearGradient>
+  </defs>
+  <path
+     fill="#9aa0b0"
+     d="M 5,8 C 3.3549904,8 2,9.3549904 2,11 v 23 c 0,1.64501 1.3549904,3 3,3 h 15 c 1.64501,0 3,-1.35499 3,-3 v -1 h -2 v 1 c 0,0.564129 -0.435871,1 -1,1 H 5 C 4.4358706,35 4,34.564129 4,34 V 11 C 4,10.435871 4.4358706,10 5,10 H 6 V 8 Z"/>
+  <path
+     fill="#6c707e"
+     d="M 10,3 C 8.3549904,3 7,4.3549904 7,6 v 23 c 0,1.64501 1.3549904,3 3,3 h 15 c 1.64501,0 3,-1.35499 3,-3 V 28.875 C 27.795511,28.804534 27.595014,28.713928 27.400391,28.601562 26.758595,28.231022 26.282997,27.685206 26,27.060547 V 29 c 0,0.564129 -0.435871,1 -1,1 H 10 C 9.4358706,30 9,29.564129 9,29 V 6 C 9,5.4358706 9.4358706,5 10,5 h 10 v 5 a 1.0001,1.0001 0 0 0 1,1 h 5 v 4.939453 c 0.282997,-0.62466 0.758594,-1.170474 1.400391,-1.541015 C 27.595013,14.286072 27.795511,14.195466 28,14.125 V 10 A 1.0001,1.0001 0 0 0 27.964844,9.7363281 1,1 0 0 0 27.927734,9.6289062 1.0001,1.0001 0 0 0 27.921875,9.6113281 1,1 0 0 0 27.865234,9.5 a 1.0001,1.0001 0 0 0 -0.0039,-0.00781 1,1 0 0 0 -0.06836,-0.1015625 1.0001,1.0001 0 0 0 -0.0078,-0.00977 1,1 0 0 0 -0.07813,-0.087891 l -0.0098,-0.00977 -5.980469,-5.9804687 A 1,1 0 0 0 21.658203,3.25 1.0001,1.0001 0 0 0 21.619143,3.214844 1,1 0 0 0 21.560553,3.175781 1.0001,1.0001 0 0 0 21.507823,3.138672 1,1 0 0 0 21.500023,3.134762 1.0001,1.0001 0 0 0 21.388695,3.078121 1,1 0 0 0 21.382795,3.076171 1.0001,1.0001 0 0 0 21.371075,3.072261 1,1 0 0 0 21.263672,3.0351562 1.0001,1.0001 0 0 0 21,3 Z M 22,6.4140625 24.585938,9 H 22 Z"/>
+  <path
+     fill="url(#paint0_linear)"
+     d="m 16.0625,15.941406 c -0.225578,0.0061 -0.452206,0.06827 -0.662109,0.189453 -0.67169,0.3878 -0.901472,1.24042 -0.513672,1.91211 l 1.1875,2.05664 h -2.375 c -0.7756,0 -1.398438,0.624791 -1.398438,1.400391 0,0.7756 0.622838,1.400391 1.398438,1.400391 h 2.375 l -1.1875,2.05664 c -0.3878,0.67169 -0.158018,1.52431 0.513672,1.91211 0.671689,0.3878 1.524309,0.15997 1.912109,-0.511719 l 1.1875,-2.056641 1.1875,2.056641 c 0.3878,0.671689 1.24042,0.899519 1.912109,0.511719 0.67169,-0.3878 0.901472,-1.24042 0.513672,-1.91211 l -1.1875,-2.05664 h 2.375 c 0.7756,0 1.398438,-0.624791 1.398438,-1.400391 0,-0.7756 -0.622838,-1.400391 -1.398438,-1.400391 h -2.375 l 1.1875,-2.05664 c 0.3878,-0.67169 0.158018,-1.52431 -0.513672,-1.91211 -0.671689,-0.3878 -1.524309,-0.15997 -1.912109,0.511719 L 18.5,18.699219 17.3125,16.642578 c -0.266612,-0.461786 -0.753728,-0.714577 -1.25,-0.701172 z m 13,0 c -0.225578,0.0061 -0.452206,0.06827 -0.662109,0.189453 -0.67169,0.3878 -0.901472,1.24042 -0.513672,1.91211 l 1.1875,2.05664 h -2.375 c -0.7756,0 -1.398438,0.624791 -1.398438,1.400391 0,0.7756 0.622838,1.400391 1.398438,1.400391 h 2.375 l -1.1875,2.05664 c -0.3878,0.67169 -0.158018,1.52431 0.513672,1.91211 0.671689,0.3878 1.524309,0.15997 1.912109,-0.511719 l 1.1875,-2.056641 1.1875,2.056641 c 0.3878,0.671689 1.24042,0.899519 1.912109,0.511719 0.67169,-0.3878 0.901472,-1.24042 0.513672,-1.91211 l -1.1875,-2.05664 h 2.375 c 0.7756,0 1.398438,-0.624791 1.398438,-1.400391 0,-0.7756 -0.622838,-1.400391 -1.398438,-1.400391 h -2.375 l 1.1875,-2.05664 c 0.3878,-0.67169 0.158018,-1.52431 -0.513672,-1.91211 -0.671689,-0.3878 -1.524309,-0.15997 -1.912109,0.511719 L 31.5,18.699219 30.3125,16.642578 c -0.266612,-0.461786 -0.753728,-0.714577 -1.25,-0.701172 z"/>
 </svg>
