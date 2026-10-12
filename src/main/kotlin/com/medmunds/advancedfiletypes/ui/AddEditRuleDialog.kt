@@ -38,22 +38,12 @@ class AddEditRuleDialog(
     internal val fileTypeCombo = ComboBox(availableFileTypes.toTypedArray()).apply {
         renderer = SimpleListCellRenderer.create { label, value, _ ->
             if (value != null) {
-                label.icon = value.icon
-                val desc = value.description
-                label.text = if (desc.isNotBlank()) {
-                    AdvancedFileTypesBundle.message("fileType.display.withDescription", value.displayName, desc)
-                } else {
-                    value.displayName
-                }
+                label.icon = FileTypeDisplayHelper.iconFor(value)
+                label.text = FileTypeDisplayHelper.displayText(value)
             }
         }
         ComboboxSpeedSearch.installSpeedSearch(this) { fileType ->
-            val desc = fileType?.description ?: ""
-            if (desc.isNotBlank()) {
-                AdvancedFileTypesBundle.message("fileType.display.withDescription", fileType?.displayName ?: "", desc)
-            } else {
-                fileType?.displayName ?: ""
-            }
+            fileType?.let { FileTypeDisplayHelper.displayText(it) } ?: ""
         }
         val targetName = existingRule?.fileTypeName
         if (targetName != null) {

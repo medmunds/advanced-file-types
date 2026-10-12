@@ -490,53 +490,131 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         val component = configurable.createComponent()
         Assert.assertNotNull(component)
 
-        val resultLabel = configurable.testResultLabel
-        Assert.assertEquals(javax.swing.SwingConstants.TOP, resultLabel.verticalAlignment)
+        val typeLabel = configurable.testResultCell.component
+        val detailLabel = configurable.testResultCell.comment
 
-        // Preferred and minimum height should allocate space for at least 2 lines of text
-        val fontMetrics = resultLabel.getFontMetrics(resultLabel.font)
-        val twoLinesHeight = (fontMetrics?.height ?: 16) * 2
-        Assert.assertTrue(
-            "Preferred height should be at least two lines",
-            resultLabel.preferredSize.height >= twoLinesHeight
-        )
-        Assert.assertTrue(
-            "Minimum height should be at least two lines",
-            resultLabel.minimumSize.height >= twoLinesHeight
-        )
-        Assert.assertEquals(
-            "Preferred width should be 0 to avoid forcing horizontal scrolling",
-            0,
-            resultLabel.preferredSize.width
-        )
-        Assert.assertEquals(
-            "Minimum width should be 0 to avoid forcing horizontal scrolling",
-            0,
-            resultLabel.minimumSize.width
-        )
-
-        // Test matched state uses HTML wrapping and displays icon
+        // Test matched state: type label shows file type with icon, detail label shows match info
         val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
         configurable.testPathField.text = "docs/test.txt"
-        Assert.assertTrue("Result text should be wrapped in HTML", resultLabel.text.startsWith("<html>"))
-        Assert.assertTrue(resultLabel.text.contains("docs/*.txt"))
-        Assert.assertTrue(resultLabel.text.contains("HTML"))
-        Assert.assertEquals(htmlType?.icon, resultLabel.icon)
+        configurable.updateTestResult()
+        Assert.assertTrue("Type label should show HTML", typeLabel.text.contains("HTML"))
+        Assert.assertEquals(htmlType?.icon, typeLabel.icon)
+        Assert.assertTrue("Detail label should contain pattern", (detailLabel?.text ?: "").contains("docs/*.txt"))
 
-        // Space remains allocated for two lines when text is populated
-        Assert.assertTrue(resultLabel.preferredSize.height >= twoLinesHeight)
-
-        // Test unmatched state uses HTML wrapping without icon
+        // Test unmatched state: type label shows IDE default, detail label shows no override
         configurable.testPathField.text = "unknown/file.abc"
-        Assert.assertTrue("Unmatched result text should be wrapped in HTML", resultLabel.text.startsWith("<html>"))
-        Assert.assertNull(resultLabel.icon)
+        configurable.updateTestResult()
+        Assert.assertTrue("Type label should indicate IDE default", typeLabel.text.contains("default", true))
+        Assert.assertNull(typeLabel.icon)
+        Assert.assertTrue("Detail label should indicate no override", (detailLabel?.text ?: "").contains("No override", true))
 
-        // Verify left edges of testPathField and testResultLabel are aligned
-        component.setSize(800, 600)
-        component.validate()
-        val pathPos = javax.swing.SwingUtilities.convertPoint(configurable.testPathField, 0, 0, component)
-        val resultPos = javax.swing.SwingUtilities.convertPoint(resultLabel, 0, 0, component)
-        Assert.assertEquals("Left edges of sample path input and result label should be aligned", pathPos.x, resultPos.x)
+        // Test empty path clears both labels (uses NBSP to prevent layout shifts)
+        configurable.testPathField.text = ""
+        configurable.updateTestResult()
+        Assert.assertEquals("\u00A0", typeLabel.text)
+        Assert.assertNull(typeLabel.icon)
+        // Detail label is cleared to NBSP; the DSL comment label wraps it in HTML with CSS styles
+        Assert.assertTrue("Detail label should contain NBSP entity", (detailLabel?.text ?: "").contains("&#160;"))
+
+        configurable.disposeUIResources()
+    }
+
+    fun testTestPatternMatchingHtmlEscaping() {
+        // Regression test: patterns containing HTML-sensitive characters must be escaped
+        // to prevent HTML injection in the detail label (DSL comment renders HTML)
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        val component = configurable.createComponent()
+        Assert.assertNotNull(component)
+
+        val detailLabel = configurable.testResultCell.comment
+
+        settings.setRules(listOf(
+            FileTypeOverrideRule(
+                pattern = "[<>&]*.y",
+                fileTypeName = "HTML",
+                syntax = PatternSyntax.GLOB
+            )
+        ))
+        configurable.reset()
+        configurable.testPathField.text = "&foo.y"
+        configurable.updateTestResult()
+        val detailText = detailLabel?.text ?: ""
+        Assert.assertTrue(
+            "Pattern characters should be escaped in HTML-rendering label",
+            detailText.contains("[&lt;&gt;&amp;]*.y")
+        )
+        Assert.assertFalse(
+            "Raw <>& should not appear unescaped (would indicate HTML injection)",
+            detailText.contains("[<>&]")
+        )
+
+        configurable.disposeUIResources()
+    }
+
+    fun testTestPatternMatchingHtmlEscapingInVsCodeLanguageId() {
+        // Regression test: VS Code language IDs containing HTML-sensitive characters
+        // must be escaped to prevent HTML injection in the detail label
+        // Simulates: { "*.html": "<&script>" } in .vscode/settings.json
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        val component = configurable.createComponent()
+        Assert.assertNotNull(component)
+
+        val detailLabel = configurable.testResultCell.comment
+
+        myFixture.addFileToProject(
+            ".vscode/settings.json",
+            """
+            {
+              "files.associations": {
+                "*.vsc-test": "<&script>"
+              }
+            }
+            """.trimIndent()
+        )
+        VsCodeSettingsReader.clearCache()
+        configurable.reset()
+
+        configurable.testPathField.text = "test.vsc-test"
+        configurable.updateTestResult()
+        val vscodeDetail = detailLabel?.text ?: ""
+        Assert.assertTrue(
+            "VS Code language ID HTML characters should be escaped",
+            vscodeDetail.contains("&lt;&amp;script&gt;")
+        )
+        Assert.assertFalse(
+            "Raw <&script> should not appear unescaped in VS Code language ID",
+            vscodeDetail.contains("<&script>")
+        )
+
+        configurable.disposeUIResources()
+    }
+
+    fun testTestPatternMatchingHtmlEscapingInGitattributesLanguage() {
+        // Regression test: gitattributes linguist language values containing HTML-sensitive
+        // characters must be escaped to prevent HTML injection in the detail label
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        val component = configurable.createComponent()
+        Assert.assertNotNull(component)
+
+        val detailLabel = configurable.testResultCell.comment
+
+        addGitAttributes("*.git-test linguist-language=<&data>\n")
+        configurable.reset()
+
+        configurable.testPathField.text = "test.git-test"
+        configurable.updateTestResult()
+        val gitDetail = detailLabel?.text ?: ""
+        Assert.assertTrue(
+            "Gitattributes linguist language HTML characters should be escaped",
+            gitDetail.contains("&lt;&amp;data&gt;")
+        )
+        Assert.assertFalse(
+            "Raw <&data> should not appear unescaped in gitattributes language",
+            gitDetail.contains("<&data>")
+        )
 
         configurable.disposeUIResources()
     }
@@ -825,28 +903,34 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         // Test with checkbox enabled - should match
         configurable.testPathField.text = "test.data"
         configurable.updateTestResult()
+        val typeText1 = configurable.testResultCell.component.text
+        val detailText1 = configurable.testResultCell.comment?.text ?: ""
         Assert.assertTrue(
             "Test result should show gitattributes match when enabled",
-            configurable.testResultLabel.text.contains("JSON", true) ||
-            configurable.testResultLabel.text.contains(".gitattributes", true)
+            typeText1.contains("JSON", true) ||
+            detailText1.contains(".gitattributes", true)
         )
 
         // Disable checkbox and verify no match
         configurable.includeGitAttributesCheckBox.isSelected = false
         configurable.updateTestResult()
+        val typeText2 = configurable.testResultCell.component.text
+        val detailText2 = configurable.testResultCell.comment?.text ?: ""
         Assert.assertTrue(
             "Test result should show no match when gitattributes is disabled",
-            configurable.testResultLabel.text.contains("No override", true) ||
-            configurable.testResultLabel.text.contains("default", true)
+            typeText2.contains("default", true) ||
+            detailText2.contains("No override", true)
         )
 
         // Re-enable and verify match again
         configurable.includeGitAttributesCheckBox.isSelected = true
         configurable.updateTestResult()
+        val typeText3 = configurable.testResultCell.component.text
+        val detailText3 = configurable.testResultCell.comment?.text ?: ""
         Assert.assertTrue(
             "Test result should show gitattributes match when re-enabled",
-            configurable.testResultLabel.text.contains("JSON", true) ||
-            configurable.testResultLabel.text.contains(".gitattributes", true)
+            typeText3.contains("JSON", true) ||
+            detailText3.contains(".gitattributes", true)
         )
 
         configurable.disposeUIResources()

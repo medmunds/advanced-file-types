@@ -1,21 +1,16 @@
 package com.medmunds.advancedfiletypes.ui
 
-import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.Align
-import com.intellij.ui.dsl.builder.AlignX
-import com.intellij.ui.dsl.builder.AlignY
+import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.EditableModel
-import com.intellij.util.ui.JBUI
 import com.medmunds.advancedfiletypes.AdvancedFileTypesBundle
 import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
@@ -24,19 +19,21 @@ import com.medmunds.advancedfiletypes.model.PatternSyntax
 import com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings
 import com.medmunds.advancedfiletypes.settings.MatchResult
 import java.awt.Component
-import java.awt.Dimension
 import java.awt.event.MouseEvent
-import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JTable
-import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
 
 class AdvancedFileTypeConfigurable(private val project: Project) : SearchableConfigurable {
+
+    private companion object {
+        // NBSP reserves height in the DSL label/comment to prevent layout shifts when clearing text
+        private const val NBSP = "\u00A0"
+    }
 
     private val rules = mutableListOf<FileTypeOverrideRule>()
     private val tableModel = RuleTableModel(rules)
@@ -45,30 +42,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     internal val includeGitAttributesCheckBox = JBCheckBox(AdvancedFileTypesBundle.message("settings.includeGitAttributes"))
 
     internal val testPathField = JBTextField(30)
-    internal val testResultLabel = object : JBLabel() {
-        init {
-            verticalAlignment = SwingConstants.TOP
-        }
-
-        override fun getPreferredSize(): Dimension {
-            val size = super.getPreferredSize()
-            val fm = getFontMetrics(font)
-            val lineHeight = fm?.height ?: JBUI.scale(16)
-            val twoLinesHeight = lineHeight * 2 + insets.top + insets.bottom
-            val iconHeight = (icon?.iconHeight ?: 0) + insets.top + insets.bottom
-            val targetHeight = maxOf(twoLinesHeight, iconHeight)
-            return Dimension(0, maxOf(size.height, targetHeight))
-        }
-
-        override fun getMinimumSize(): Dimension {
-            val fm = getFontMetrics(font)
-            val lineHeight = fm?.height ?: JBUI.scale(16)
-            val twoLinesHeight = lineHeight * 2 + insets.top + insets.bottom
-            val iconHeight = (icon?.iconHeight ?: 0) + insets.top + insets.bottom
-            val targetHeight = maxOf(twoLinesHeight, iconHeight)
-            return Dimension(0, targetHeight)
-        }
-    }
+    internal lateinit var testResultCell: Cell<JLabel>
 
     override fun getId(): String = "com.medmunds.advancedfiletypes.settings"
 
@@ -127,14 +101,10 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             updateTestResult()
         }
 
-        reset()
-
-        return panel {
+        val component = panel {
             row {
                 label(AdvancedFileTypesBundle.message("settings.description"))
-            }
-            row {
-                comment(AdvancedFileTypesBundle.message("settings.explanation"))
+                    .comment(AdvancedFileTypesBundle.message("settings.explanation"))
             }
             row {
                 cell(tablePanel).align(Align.FILL)
@@ -155,12 +125,13 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                         .comment(AdvancedFileTypesBundle.message("settings.test.path.comment"))
                 }
                 row(AdvancedFileTypesBundle.message("settings.test.result.label")) {
-                    cell(testResultLabel)
-                        .align(AlignX.FILL)
-                        .align(AlignY.TOP)
+                    testResultCell = label(NBSP)
+                        .comment(NBSP)
                 }
             }
         }
+        reset()
+        return component
     }
 
     private fun setupTable() {
@@ -205,19 +176,8 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 ): Component {
                     val c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column) as JLabel
                     val typeName = value as? String ?: ""
-                    val fileType = FileTypeManager.getInstance().findFileTypeByName(typeName)
-                    if (fileType != null) {
-                        c.icon = fileType.icon
-                        val desc = fileType.description
-                        c.text = if (desc.isNotBlank()) {
-                            AdvancedFileTypesBundle.message("fileType.display.withDescription", fileType.displayName, desc)
-                        } else {
-                            fileType.displayName
-                        }
-                    } else {
-                        c.icon = null
-                        c.text = typeName
-                    }
+                    c.icon = FileTypeDisplayHelper.iconForName(typeName)
+                    c.text = FileTypeDisplayHelper.displayTextForName(typeName, UnknownFileTypeOrigin.NO_IDE_SUPPORT)
                     return c
                 }
             }
@@ -240,9 +200,11 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         }.installOn(table)
     }
 
-    private fun setResult(text: String, icon: Icon? = null) {
-        testResultLabel.text = if (text.isBlank()) "" else "<html>${StringUtil.escapeXmlEntities(text)}</html>"
-        testResultLabel.icon = icon
+    private fun setResult(typeText: String, typeIcon: javax.swing.Icon? = null, detailText: String = "") {
+        // Use NBSP for empty text to reserve height and prevent layout shifts
+        testResultCell.component.text = if (typeText.isBlank()) NBSP else typeText
+        testResultCell.component.icon = typeIcon // TODO: somehow force height if null to avoid layout shifts
+        testResultCell.comment?.text = if (detailText.isBlank()) NBSP else detailText
     }
 
     internal fun updateTestResult() {
@@ -265,57 +227,67 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         when (matchResult) {
             is MatchResult.PluginRuleMatch -> {
                 setResult(
-                    AdvancedFileTypesBundle.message(
-                        "settings.test.matched",
-                        matchResult.rule.pattern,
-                        matchResult.fileType.displayName,
-                        matchResult.rule.fileTypeName
-                    ),
-                    matchResult.fileType.icon
+                    typeText = FileTypeDisplayHelper.displayText(matchResult.fileType),
+                    typeIcon = FileTypeDisplayHelper.iconFor(matchResult.fileType),
+                    detailText = AdvancedFileTypesBundle.message(
+                        "settings.test.matched.pattern",
+                        escapeHtml(matchResult.rule.pattern)
+                    )
                 )
             }
             is MatchResult.VsCodeMatch -> {
                 setResult(
-                    AdvancedFileTypesBundle.message(
-                        "settings.test.matched.vscode",
-                        matchResult.pattern,
-                        matchResult.fileType.displayName,
-                        matchResult.fileType.name
-                    ),
-                    matchResult.fileType.icon
+                    typeText = FileTypeDisplayHelper.displayText(matchResult.fileType),
+                    typeIcon = FileTypeDisplayHelper.iconFor(matchResult.fileType),
+                    detailText = AdvancedFileTypesBundle.message(
+                        "settings.test.matched.vscode.pattern",
+                        escapeHtml(matchResult.pattern),
+                        escapeHtml(matchResult.languageId)
+                    )
                 )
             }
             is MatchResult.VsCodeUnsupportedMatch -> {
                 setResult(
-                    AdvancedFileTypesBundle.message(
-                        "settings.test.matched.vscode.unsupported",
-                        matchResult.pattern,
-                        matchResult.languageId
+                    typeText = FileTypeDisplayHelper.displayTextForUnknown(
+                        matchResult.languageId,
+                        UnknownFileTypeOrigin.VS_CODE_IDENTIFIER
+                    ),
+                    typeIcon = FileTypeDisplayHelper.iconForUnknown(),
+                    detailText = AdvancedFileTypesBundle.message(
+                        "settings.test.matched.vscode.pattern",
+                        escapeHtml(matchResult.pattern),
+                        escapeHtml(matchResult.languageId)
                     )
                 )
             }
             is MatchResult.GitAttributesMatch -> {
                 setResult(
-                    AdvancedFileTypesBundle.message(
-                        "settings.test.matched.gitattributes",
-                        matchResult.pattern,
-                        matchResult.fileType.displayName,
-                        matchResult.fileType.name
-                    ),
-                    matchResult.fileType.icon
+                    typeText = FileTypeDisplayHelper.displayText(matchResult.fileType),
+                    typeIcon = FileTypeDisplayHelper.iconFor(matchResult.fileType),
+                    detailText = AdvancedFileTypesBundle.message(
+                        "settings.test.matched.gitattributes.pattern",
+                        escapeHtml(matchResult.language)
+                    )
                 )
             }
             is MatchResult.GitAttributesUnsupportedMatch -> {
                 setResult(
-                    AdvancedFileTypesBundle.message(
-                        "settings.test.matched.gitattributes.unsupported",
-                        matchResult.pattern,
-                        matchResult.language
+                    typeText = FileTypeDisplayHelper.displayTextForUnknown(
+                        matchResult.language,
+                        UnknownFileTypeOrigin.LINGUIST_IDENTIFIER
+                    ),
+                    typeIcon = FileTypeDisplayHelper.iconForUnknown(),
+                    detailText = AdvancedFileTypesBundle.message(
+                        "settings.test.matched.gitattributes.pattern",
+                        escapeHtml(matchResult.language)
                     )
                 )
             }
             is MatchResult.NoMatch -> {
-                setResult(AdvancedFileTypesBundle.message("settings.test.no.match"))
+                setResult(
+                    typeText = AdvancedFileTypesBundle.message("settings.test.no.match.type"),
+                    detailText = AdvancedFileTypesBundle.message("settings.test.no.override")
+                )
             }
         }
     }
@@ -409,4 +381,14 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             }
         }
     }
+}
+
+// Escape HTML entities for safe insertion into HTML-rendering labels (e.g., DSL comment labels)
+private fun escapeHtml(text: String): String {
+    return text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
 }
