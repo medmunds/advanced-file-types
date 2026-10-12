@@ -51,22 +51,16 @@ If none of those match a particular file, the IDE's global rules from **Settings
 
 ### Glob patterns
 
-Glob patterns support most common shell-style wildcards.
+Glob patterns follow [VS Code's glob syntax][vscode-glob-patterns] and support `*` and `?` filename wildcards, `**` to match zero or more directories, `{txt,html}` alternations, `[0-9.]` character ranges and `[!a-z]` negated ranges.
 
-| Pattern | Matches | Example |
-| :--- | :--- | :--- |
-| `*` | Zero or more characters except `/` | `docs/*.txt` |
-| `**` | Zero or more directories recursively | `docs/**/*.txt` |
-| `?` | Exactly one character | `file-?.log` |
-| `{a,b,...}` | Alternation: a or b | `*.{txt,md}` |
-| `[abc]`, `[0-9]` | Character class | `src/test-[0-9].kt` |
-| `[!abc]` | Negated character class | `data-[!0-9].csv` |
+* Use `/` as the directory separator, even on Windows. (Backslashes in Windows paths are converted to `/` before matching.)
+* Glob patterns **without `/`** match a *filename* anywhere in the project. (`*.txt` matches `readme.txt` and `docs/help/faq.txt` but not `docs/intro.txt.bak`.)
+* Glob patterns **with `/`** match a *full path* starting at project root. (`docs/*.txt` matches `docs/intro.txt` but not `readme.txt` or `public/docs/faq.txt`.) Use `**` match multiple path segments.
+* Matching is **case-insensitive** on all operating systems.
+* Leading `./` and `/` are ignored in glob patterns.
+* You cannot use backslash to escape characters in glob patterns. Use the `[...]` syntax instead: `[[]` to match a literal `[`, `[}]` to match `}`, etc.
 
-**Path matching rules:**
-* Glob patterns **without `/`**  match a *filename* anywhere in the project (`*.txt` matches `readme.txt` and `docs/help/faq.txt` but not `docs/intro.txt.bak`)
-* Glob patterns **with `/`** match a *path* starting at project root (`docs/*.txt` matches `docs/intro.txt` but not `readme.txt` or `public/docs/faq.txt`)
-* All matching is **case-insensitive** and backslashes are normalized to forward slashes.
-* Leading `./` and `/` are ignored in glob patterns. 
+[vscode-glob-patterns]: https://code.visualstudio.com/docs/editor/glob-patterns
 
 ### Regular expression patterns
 
@@ -81,7 +75,7 @@ Regex syntax follows Java's [`java.util.regex.Pattern`][java-regex] with case-in
 
 ### VS Code settings and .gitattributes linguist-language support
 
-VS Code file type associations are read from the `files.associations` section in `.vscode/settings.json`. (The plugin only checks the root `.vscode/settings.json` file. Multi-root workspaces are not currently supported.)
+VS Code file type associations are read from the `files.associations` section in `.vscode/settings.json`. (Patterns are treated as case-insensitive on all platforms, which doesn't strictly match VS Code. The plugin only checks the root `.vscode/settings.json` file. Multi-root workspaces are not currently supported.)
 
 GitHub language IDs are read from `linguist-language` properties in `.gitattributes` files. (The plugin delegates git attribute parsing to `git`, so this only works in projects that are actually in a git repository.)
 
