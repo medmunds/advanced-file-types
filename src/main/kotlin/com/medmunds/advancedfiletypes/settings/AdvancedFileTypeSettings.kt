@@ -227,5 +227,14 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
         fun getInstance(project: Project): AdvancedFileTypeSettings {
             return project.getService(AdvancedFileTypeSettings::class.java)
         }
+
+        fun notifyFileTypesChanged(project: Project) {
+            if (!project.isDisposed) {
+                val fileTypeManager = FileTypeManager.getInstance()
+                if (fileTypeManager is FileTypeManagerEx) {
+                    fileTypeManager.fireFileTypesChanged()
+                }
+            }
+        }
     }
 }

@@ -8,6 +8,7 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.util.concurrency.AppExecutorUtil
 import git4idea.config.GitExecutableManager
+import git4idea.repo.GitRepositoryManager
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
 import java.io.File
@@ -68,11 +69,42 @@ class GitAttributesService(private val project: Project) : Disposable {
     }
 
     /**
+     * Checks whether Git and a Git repository are available for this project.
+     */
+    fun isGitAvailable(): Boolean {
+        if (project.isDisposed || !project.isInitialized || project.isDefault) {
+            return false
+        }
+        if (customProjectDirectory != null) {
+            val custom = customProjectDirectory ?: return false
+            return File(custom, ".git").exists()
+        }
+        try {
+            val repoManager = GitRepositoryManager.getInstance(project)
+            if (repoManager.repositories.isNotEmpty()) {
+                return true
+            }
+        } catch (_: Exception) {}
+
+        var dir = getProjectDirectory()
+        while (dir != null) {
+            if (File(dir, ".git").exists()) {
+                return true
+            }
+            dir = dir.parentFile
+        }
+        return false
+    }
+
+    /**
      * Retrieves the Linguist language assigned to the given relative path via .gitattributes,
      * or null if no language is assigned or Git attributes evaluation is unavailable.
      */
     fun getLanguage(relativePath: String): String? {
         if (project.isDisposed || !project.isInitialized || project.isDefault) {
+            return null
+        }
+        if (!isGitAvailable()) {
             return null
         }
 
@@ -91,7 +123,7 @@ class GitAttributesService(private val project: Project) : Disposable {
                 return@withLock if (cachedInLock == NULL_SENTINEL) null else cachedInLock
             }
 
-            if (isGitUnavailable) {
+            if (isGitUnavailable || !isGitAvailable()) {
                 return@withLock null
             }
 
@@ -163,10 +195,18 @@ class GitAttributesService(private val project: Project) : Disposable {
         }
 
         if (existing != null && !existing.isAlive()) {
+            val stderr = readStderr(existing.process)
             val exitCode = try { existing.process.exitValue() } catch (_: Exception) { -1 }
-            LOG.warn("git check-attr process died unexpectedly (exitValue=$exitCode). Restarting process for project '${project.name}'.")
-            existing.close()
-            currentSession = null
+            if (isNotGitRepo(stderr, exitCode)) {
+                handleNotGitRepo(stderr)
+                existing.close()
+                currentSession = null
+                return null
+            } else {
+                LOG.warn("git check-attr process died unexpectedly (exitValue=$exitCode, stderr='$stderr'). Restarting process for project '${project.name}'.")
+                existing.close()
+                currentSession = null
+            }
         }
 
         val workDir = getProjectDirectory()
@@ -187,9 +227,23 @@ class GitAttributesService(private val project: Project) : Disposable {
         return try {
             val pb = ProcessBuilder(effectiveGit, "check-attr", "--stdin", "-z", LINGUIST_ATTR)
             pb.directory(workDir)
-            pb.redirectError(ProcessBuilder.Redirect.DISCARD)
 
             val proc = pb.start()
+
+            // Check if process terminated immediately (e.g. non-git directory or bad executable)
+            if (proc.waitFor(50, TimeUnit.MILLISECONDS)) {
+                val exitCode = proc.exitValue()
+                val stderr = readStderr(proc)
+                if (isNotGitRepo(stderr, exitCode)) {
+                    handleNotGitRepo(stderr)
+                } else {
+                    LOG.warn("git check-attr process terminated unexpectedly on startup for project '${project.name}' (exitCode=$exitCode, stderr='$stderr').")
+                    isGitUnavailable = true
+                }
+                proc.destroyForcibly()
+                return null
+            }
+
             val session = ProcessSession(proc, proc.outputStream, proc.inputStream)
             currentSession = session
             LOG.info("Started git check-attr process (pid=${proc.pid()}) for project '${project.name}' in '$workDir'.")
@@ -210,8 +264,9 @@ class GitAttributesService(private val project: Project) : Disposable {
                 session.stdin.flush()
 
                 // Read 3 NUL-separated fields: <path>\0<attr>\0<info>\0
-                val respPath = readNulTerminatedString(session.stdout)
-                val respAttr = readNulTerminatedString(session.stdout)
+                // Access to stdin/stdout is serialized under lock, so responses strictly match the queried path and attribute.
+                readNulTerminatedString(session.stdout)
+                readNulTerminatedString(session.stdout)
                 val respInfo = readNulTerminatedString(session.stdout)
 
                 respInfo
@@ -235,12 +290,36 @@ class GitAttributesService(private val project: Project) : Disposable {
             null
         } catch (e: Exception) {
             val cause = e.cause ?: e
-            val exitValue = if (!session.isAlive()) try { session.process.exitValue() } catch (_: Exception) { -1 } else "alive"
-            LOG.warn("git check-attr process communication failed for path '$normalizedPath' (process state=$exitValue): ${cause.message}", cause)
+            val stderr = readStderr(session.process)
+            val exitCode = if (!session.isAlive()) try { session.process.exitValue() } catch (_: Exception) { null } else null
+            if (isNotGitRepo(stderr, exitCode)) {
+                handleNotGitRepo(stderr)
+            } else {
+                val state = exitCode?.let { "exitValue=$it" } ?: "alive"
+                LOG.warn("git check-attr process communication failed for path '$normalizedPath' (process state=$state, stderr='$stderr'): ${cause.message}", cause)
+            }
             session.close()
             currentSession = null
             null
         }
+    }
+
+    private fun readStderr(process: Process): String {
+        return try {
+            process.errorStream.bufferedReader().readText().trim()
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun isNotGitRepo(stderr: String, exitCode: Int?): Boolean {
+        return stderr.contains(NOT_A_GIT_REPO_MESSAGE, ignoreCase = true) || exitCode == 128
+    }
+
+    private fun handleNotGitRepo(stderr: String) {
+        val details = if (stderr.isNotBlank()) " ($stderr)" else ""
+        LOG.info("Project '${project.name}' is not a Git repository$details. Git attributes evaluation is disabled.")
+        isGitUnavailable = true
     }
 
     private fun readNulTerminatedString(input: InputStream): String {
@@ -285,6 +364,7 @@ class GitAttributesService(private val project: Project) : Disposable {
     }
 
     companion object {
+        private const val NOT_A_GIT_REPO_MESSAGE = "not a git repository"
         private const val LINGUIST_ATTR = "linguist-language"
         private const val QUERY_TIMEOUT_MS = 2000L
         private const val IDLE_TIMEOUT_MS = 60_000L

@@ -17,6 +17,7 @@ import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.EditableModel
 import com.intellij.util.ui.JBUI
 import com.medmunds.advancedfiletypes.AdvancedFileTypesBundle
+import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PatternSyntax
@@ -142,7 +143,11 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 cell(includeVsCodeCheckBox)
             }
             row {
-                cell(includeGitAttributesCheckBox)
+                val gitCell = cell(includeGitAttributesCheckBox)
+                val isGitAvailable = GitAttributesService.getInstance(project).isGitAvailable()
+                if (!isGitAvailable) {
+                    gitCell.comment(AdvancedFileTypesBundle.message("settings.includeGitAttributes.unavailable"))
+                }
             }
             group(AdvancedFileTypesBundle.message("settings.test.group")) {
                 row(AdvancedFileTypesBundle.message("settings.test.path.label")) {
@@ -317,16 +322,25 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
     override fun isModified(): Boolean {
         val settings = AdvancedFileTypeSettings.getInstance(project)
+        val isGitAvailable = GitAttributesService.getInstance(project).isGitAvailable()
+        val gitModified = if (isGitAvailable) {
+            includeGitAttributesCheckBox.isSelected != settings.isLoadFromGitAttributes()
+        } else {
+            false
+        }
         return rules != settings.getRules() 
             || includeVsCodeCheckBox.isSelected != settings.isLoadFromVsCodeSettings()
-            || includeGitAttributesCheckBox.isSelected != settings.isLoadFromGitAttributes()
+            || gitModified
     }
 
     override fun apply() {
         val settings = AdvancedFileTypeSettings.getInstance(project)
         settings.setRules(rules)
         settings.setLoadFromVsCodeSettings(includeVsCodeCheckBox.isSelected)
-        settings.setLoadFromGitAttributes(includeGitAttributesCheckBox.isSelected)
+        val isGitAvailable = GitAttributesService.getInstance(project).isGitAvailable()
+        if (isGitAvailable) {
+            settings.setLoadFromGitAttributes(includeGitAttributesCheckBox.isSelected)
+        }
     }
 
     override fun reset() {
@@ -335,7 +349,14 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         rules.addAll(settings.getRules().map { it.copy() })
         tableModel.fireTableDataChanged()
         includeVsCodeCheckBox.isSelected = settings.isLoadFromVsCodeSettings()
-        includeGitAttributesCheckBox.isSelected = settings.isLoadFromGitAttributes()
+        val isGitAvailable = GitAttributesService.getInstance(project).isGitAvailable()
+        if (isGitAvailable) {
+            includeGitAttributesCheckBox.isEnabled = true
+            includeGitAttributesCheckBox.isSelected = settings.isLoadFromGitAttributes()
+        } else {
+            includeGitAttributesCheckBox.isEnabled = false
+            includeGitAttributesCheckBox.isSelected = false
+        }
         updateTestResult()
     }
 

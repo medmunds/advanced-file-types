@@ -52,6 +52,8 @@ class GitAttributesServiceTest : BasePlatformTestCase() {
         service.customProjectDirectory = tempGitDir
         service.clearCache()
 
+        Assert.assertTrue(service.isGitAvailable())
+
         // Root rules
         Assert.assertEquals("Markdown", service.getLanguage("file.dat"))
         Assert.assertEquals("JSON", service.getLanguage("docs/test.xyz"))
@@ -99,8 +101,10 @@ class GitAttributesServiceTest : BasePlatformTestCase() {
             service.customProjectDirectory = nonGitDir
             service.clearCache()
 
+            Assert.assertFalse("isGitAvailable should be false for non-git directory", service.isGitAvailable())
+
             val result = service.getLanguage("file.txt")
-            Assert.assertNull("Non-git repo should return null without throwing", result)
+            Assert.assertNull("Non-git repo should return null without throwing or warning", result)
         } finally {
             nonGitDir.deleteRecursively()
         }
@@ -130,7 +134,26 @@ class GitAttributesServiceTest : BasePlatformTestCase() {
         process.waitFor()
         Assert.assertFalse(process.isAlive)
 
-        // 3. Querying another uncached file should detect dead process, log warning, restart, and succeed
+        // 3. Querying another uncached file should detect dead process, restart, and succeed
         Assert.assertEquals("JSON", service.getLanguage("data.json"))
+    }
+
+    fun testGitRepositoryEventListener() {
+        val gitattributes = File(tempGitDir, ".gitattributes")
+        gitattributes.writeText("*.foo linguist-language=JSON\n")
+
+        val service = GitAttributesService.getInstance(project)
+        service.customProjectDirectory = tempGitDir
+        service.clearCache()
+
+        Assert.assertEquals("JSON", service.getLanguage("sample.foo"))
+        Assert.assertTrue(service.isCached("sample.foo"))
+
+        // Trigger listener
+        val listener = GitRepositoryEventListener(project)
+        listener.mappingChanged()
+
+        // Cache should be cleared
+        Assert.assertFalse("Cache should be cleared after mapping change event", service.isCached("sample.foo"))
     }
 }

@@ -863,4 +863,31 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         val matchDisabled = settings.evaluateMatch("test.data", "test.data", includeGitAttributes = false)
         Assert.assertEquals("Should not match when gitattributes disabled", MatchResult.NoMatch, matchDisabled)
     }
+
+    fun testGitAttributesDisabledWhenNoGitRepo() {
+        val nonGitDir = kotlin.io.path.createTempDirectory("non-git-ui-test").toFile()
+        try {
+            val service = GitAttributesService.getInstance(project)
+            service.customProjectDirectory = nonGitDir
+            service.clearCache()
+
+            val configurable = AdvancedFileTypeConfigurable(project)
+            configurable.createComponent()
+            configurable.reset()
+
+            // When no git repository is present, checkbox should be unchecked and disabled
+            Assert.assertFalse("Checkbox should be disabled when no git repository", configurable.includeGitAttributesCheckBox.isEnabled)
+            Assert.assertFalse("Checkbox should be unchecked when no git repository", configurable.includeGitAttributesCheckBox.isSelected)
+
+            // isModified should be false
+            Assert.assertFalse(configurable.isModified)
+
+            configurable.disposeUIResources()
+        } finally {
+            nonGitDir.deleteRecursively()
+            val service = GitAttributesService.getInstance(project)
+            service.customProjectDirectory = tempGitDir
+            service.clearCache()
+        }
+    }
 }

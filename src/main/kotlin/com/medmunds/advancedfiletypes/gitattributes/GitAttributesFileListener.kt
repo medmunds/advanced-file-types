@@ -59,7 +59,12 @@ class GitAttributesFileListener : BulkFileListener {
 
     private fun isGitAttributesEvent(path: String, projectDirPath: String): Boolean {
         if (!path.startsWith(projectDirPath)) return false
+        val relPath = path.removePrefix(projectDirPath).removePrefix("/")
         val fileName = path.substringAfterLast('/')
-        return fileName == ".gitattributes" || path.endsWith("/.git/info/attributes")
+        return fileName == ".gitattributes"
+            || relPath == ".git"
+            || relPath.startsWith(".git/")
+            || relPath.contains("/.git/")
+            || relPath.endsWith("/.git")
     }
 }
