@@ -109,15 +109,15 @@ class PathPatternMatcherTest {
         assertTrue(PathPatternMatcher.matches(pattern, null, fileName))
     }
 
-    @ParameterizedTest(name = "Windows path separator normalization in Standard dialect: 'src\\*.txt' against path=''{0}'', file=''{1}'' -> {2}")
+    @ParameterizedTest(name = "Windows path separator normalization: 'src\\*.txt' against path=''{0}'', file=''{1}'' -> {2}")
     @CsvSource(
         "src/file.txt, file.txt, true",
         "src\\file.txt, file.txt, true",
         "docs/file.txt, file.txt, false",
         "src/sub/file.txt, file.txt, false"
     )
-    fun testWindowsBackslashNormalizationStandardDialect(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("src\\*.txt", PatternSyntax.GLOB, GlobDialect.STANDARD)
+    fun testWindowsBackslashNormalization(relativePath: String, fileName: String, expectedMatch: Boolean) {
+        val pattern = PathPatternMatcher.compile("src\\*.txt", PatternSyntax.GLOB)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
         assertEquals(expectedMatch, result)
     }
@@ -128,96 +128,8 @@ class PathPatternMatcherTest {
         "foo\\bar\\baz.json, baz.json, true",
         "other/bar/baz.json, baz.json, false"
     )
-    fun testWindowsMultiDirectoryStandardDialect(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("foo\\bar\\baz.json", PatternSyntax.GLOB, GlobDialect.STANDARD)
-        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    @ParameterizedTest(name = "Git dialect escaped asterisk 'foo\\*.txt' against path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "foo*.txt, foo*.txt, true",
-        "dir/foo*.txt, foo*.txt, true",
-        "foobar.txt, foobar.txt, false",
-        "foo123.txt, foo123.txt, false"
-    )
-    fun testGitDialectEscapedAsterisk(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("foo\\*.txt", PatternSyntax.GLOB, GlobDialect.GIT_ATTRIBUTES)
-        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    @ParameterizedTest(name = "Git dialect literal braces '*.{js,ts}' against path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "'file.{js,ts}', 'file.{js,ts}', true",
-        "'dir/file.{js,ts}', 'file.{js,ts}', true",
-        "'file.js', 'file.js', false",
-        "'file.ts', 'file.ts', false"
-    )
-    fun testGitDialectLiteralBraces(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("*.{js,ts}", PatternSyntax.GLOB, GlobDialect.GIT_ATTRIBUTES)
-        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    @ParameterizedTest(name = "Git dialect embedded '**' acts as single '*' in 'foo**bar' against path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "foobar, foobar, true",
-        "fooxxxbar, fooxxxbar, true",
-        "dir/fooxxxbar, fooxxxbar, true",
-        "foo/sub/bar, bar, false"
-    )
-    fun testGitDialectEmbeddedDoubleAsterisk(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("foo**bar", PatternSyntax.GLOB, GlobDialect.GIT_ATTRIBUTES)
-        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    @ParameterizedTest(name = "Git dialect slash-bounded '**' crosses directories 'foo/**/bar' against path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "foo/bar, bar, true",
-        "foo/sub/bar, bar, true",
-        "foo/a/b/c/bar, bar, true",
-        "other/sub/bar, bar, false"
-    )
-    fun testGitDialectSlashBoundedDoubleAsterisk(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("foo/**/bar", PatternSyntax.GLOB, GlobDialect.GIT_ATTRIBUTES)
-        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    @ParameterizedTest(name = "Git dialect root anchoring 'docs/*.txt' against path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "docs/file.txt, file.txt, true",
-        "sub/docs/file.txt, file.txt, false"
-    )
-    fun testGitDialectRootAnchoring(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("docs/*.txt", PatternSyntax.GLOB, GlobDialect.GIT_ATTRIBUTES)
-        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    @ParameterizedTest(name = "Glob 'foo\\[bar\\].txt' against path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "foo[bar].txt, foo[bar].txt, true",
-        "dir/foo[bar].txt, foo[bar].txt, true",
-        "foob.txt, foob.txt, false",
-        "fooa.txt, fooa.txt, false"
-    )
-    fun testEscapedBracketsGlob(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("foo\\[bar\\].txt", PatternSyntax.GLOB, GlobDialect.GIT_ATTRIBUTES)
-        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    @ParameterizedTest(name = "Glob 'foo\\ bar.txt' against path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "foo bar.txt, foo bar.txt, true",
-        "dir/foo bar.txt, foo bar.txt, true",
-        "foobar.txt, foobar.txt, false"
-    )
-    fun testEscapedSpaceGlob(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("foo\\ bar.txt", PatternSyntax.GLOB, GlobDialect.GIT_ATTRIBUTES)
+    fun testWindowsMultiDirectory(relativePath: String, fileName: String, expectedMatch: Boolean) {
+        val pattern = PathPatternMatcher.compile("foo\\bar\\baz.json", PatternSyntax.GLOB)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
         assertEquals(expectedMatch, result)
     }
@@ -229,20 +141,8 @@ class PathPatternMatcherTest {
         "docs/sub/file.txt, file.txt, true"
     )
     fun testStandardGlobLeadingSlashNormalization(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("/*.txt", PatternSyntax.GLOB, GlobDialect.STANDARD)
+        val pattern = PathPatternMatcher.compile("/*.txt", PatternSyntax.GLOB)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    @ParameterizedTest(name = "Git wildmatch '/*.txt' is root-anchored: path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "file.txt, file.txt, true",
-        "docs/file.txt, file.txt, false",
-        "docs/sub/file.txt, file.txt, false"
-    )
-    fun testGitDialectRootAnchoredGlob(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val rule = com.medmunds.advancedfiletypes.gitattributes.GitAttributesRule("/*.txt", "Markdown")
-        val result = rule.matches(relativePath, fileName)
         assertEquals(expectedMatch, result)
     }
 
@@ -258,20 +158,6 @@ class PathPatternMatcherTest {
         assertEquals(expectedMatch, result)
     }
 
-    @ParameterizedTest(name = "Git dialect spaces preserved in pattern: path=''{0}'', file=''{1}'' -> {2}")
-    @CsvSource(
-        "' leading and trailing ', ' leading and trailing ', true",
-        "'dir/ leading and trailing ', ' leading and trailing ', true",
-        "'leading and trailing', 'leading and trailing', false"
-    )
-    fun testGitDialectSpacesPreserved(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile(" leading and trailing ", PatternSyntax.GLOB, GlobDialect.GIT_ATTRIBUTES)
-        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
-        assertEquals(expectedMatch, result)
-    }
-
-    // Tests for glob bugs fixed during .gitattributes refactoring
-
     @ParameterizedTest(name = "Standard glob nested braces 'src/{a/{b,c},d}.txt' against path=''{0}'', file=''{1}'' -> {2}")
     @CsvSource(
         "src/a/b.txt, b.txt, true",
@@ -281,7 +167,7 @@ class PathPatternMatcherTest {
         "src/x.txt, x.txt, false"
     )
     fun testStandardGlobNestedBraces(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("src/{a/{b,c},d}.txt", PatternSyntax.GLOB, GlobDialect.STANDARD)
+        val pattern = PathPatternMatcher.compile("src/{a/{b,c},d}.txt", PatternSyntax.GLOB)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
         assertEquals(expectedMatch, result)
     }
@@ -295,7 +181,7 @@ class PathPatternMatcherTest {
         "A.txt, A.txt, false"
     )
     fun testStandardGlobNegatedCharacterClass(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("[!a-z].txt", PatternSyntax.GLOB, GlobDialect.STANDARD)
+        val pattern = PathPatternMatcher.compile("[!a-z].txt", PatternSyntax.GLOB)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
         assertEquals(expectedMatch, result)
     }
@@ -309,7 +195,7 @@ class PathPatternMatcherTest {
         "A.txt, A.txt, true"
     )
     fun testStandardGlobCharacterClassRange(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("[a-z0-9].txt", PatternSyntax.GLOB, GlobDialect.STANDARD)
+        val pattern = PathPatternMatcher.compile("[a-z0-9].txt", PatternSyntax.GLOB)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
         assertEquals(expectedMatch, result)
     }
@@ -322,7 +208,7 @@ class PathPatternMatcherTest {
         "src/lib/Main.kt, Main.kt, false"
     )
     fun testStandardGlobAlternationWithMultipleChoices(relativePath: String, fileName: String, expectedMatch: Boolean) {
-        val pattern = PathPatternMatcher.compile("src/{test,spec,config}/*.kt", PatternSyntax.GLOB, GlobDialect.STANDARD)
+        val pattern = PathPatternMatcher.compile("src/{test,spec,config}/*.kt", PatternSyntax.GLOB)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
         assertEquals(expectedMatch, result)
     }

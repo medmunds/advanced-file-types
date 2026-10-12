@@ -56,9 +56,9 @@ When resolving a file's type, rules are evaluated in the following strict order,
   - `VsCodeLanguageResolver`: Resolves VS Code language identifiers to IntelliJ `FileType` instances via `vscode-language-map.properties` and case-insensitive fallback.
   - `VsCodeSettingsFileListener`: `BulkFileListener` detecting changes to `.vscode/settings.json` to trigger file type refresh.
 - **`gitattributes/`**:
-  - `GitAttributesReader`: Parses root `.gitattributes` for `linguist-language` rules.
+  - `GitAttributesService`: Project-level service managing a long-lived `git check-attr --stdin -z linguist-language` process with caching, timeout handling, and failure recovery.
   - `LinguistLanguageResolver`: Maps Linguist language identifiers to IntelliJ `FileType` instances via `linguist-language-map.properties`.
-  - `GitAttributesFileListener`: `BulkFileListener` detecting changes to `.gitattributes` to trigger file type refresh.
+  - `GitAttributesFileListener`: `BulkFileListener` detecting changes to any `.gitattributes` or `.git/info/attributes` files to trigger cache clear and file type refresh.
 - **`ui/`**:
   - `AdvancedFileTypeConfigurable`: Settings page registered under `editor` (`Settings | Editor | File Type Matching`).
   - `AddEditRuleDialog`: Modal dialog for creating and editing individual pattern rules.

@@ -83,7 +83,7 @@ Regex syntax follows Java's [`java.util.regex.Pattern`][java-regex] with case-in
 
 VS Code file type associations are read from the `files.associations` section in `.vscode/settings.json`. (The plugin only checks the root `.vscode/settings.json` file. Multi-root workspaces are not currently supported.)
 
-GitHub language IDs are read from `linguist-language` properties in the root `.gitattributes` file. (`.gitattributes` files in subdirectories are currently ignored.)
+GitHub language IDs are read from `linguist-language` properties in `.gitattributes` files. (The plugin delegates git attribute parsing to `git`, so this only works in projects that are actually in a git repository.)
 
 In both cases, the plugin tries to map the [VS Code language identifier][vscode-language-id] or [GitHub Linguist ID/alias][linguist-language-id] to a JetBrains file type, based on mappings built into the plugin or case-insensitive comparison to the IDE's supported file type names. (Please open an issue for incorrect or missing mappings.) If no IDE language can be determined, the plugin will ignore the rule and not override the file type.
 

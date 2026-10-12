@@ -11,33 +11,12 @@ enum class PatternSyntax(val bundleKey: String) {
         get() = AdvancedFileTypesBundle.message(bundleKey)
 }
 
-enum class GlobDialect {
-    /**
-     * Standard glob dialect used for plugin override rules and VS Code settings.
-     * Backslashes '\' are normalized to directory separators '/', and braces '{a,b}' expand to alternations.
-     */
-    STANDARD,
-
-    /**
-     * Git wildmatch dialect used for .gitattributes files.
-     * Backslashes '\' escape literal characters, braces are literal, and '**' only crosses directories when bounded by slashes.
-     */
-    GIT_ATTRIBUTES
-}
-
 object PathPatternMatcher {
 
     /**
      * Converts a glob pattern to a standard regular expression string.
      */
-    fun globToRegex(glob: String, dialect: GlobDialect = GlobDialect.STANDARD): String {
-        return when (dialect) {
-            GlobDialect.STANDARD -> globToRegexStandard(glob)
-            GlobDialect.GIT_ATTRIBUTES -> globToRegexGitAttributes(glob)
-        }
-    }
-
-    private fun globToRegexStandard(glob: String): String {
+    fun globToRegex(glob: String): String {
         var pattern = glob.trim().replace('\\', '/')
         if (pattern.startsWith("./")) {
             pattern = pattern.substring(2)
@@ -123,116 +102,6 @@ object PathPatternMatcher {
         return sb.toString()
     }
 
-    private fun globToRegexGitAttributes(glob: String): String {
-        var pattern = glob
-        var hasSlash = false
-        var idx = 0
-        while (idx < pattern.length) {
-            if (pattern[idx] == '\\') {
-                idx += 2
-                continue
-            }
-            if (pattern[idx] == '/') {
-                hasSlash = true
-                break
-            }
-            idx++
-        }
-
-        if (pattern.startsWith("./")) {
-            pattern = pattern.substring(2)
-            hasSlash = true
-        } else if (pattern.startsWith("/")) {
-            pattern = pattern.substring(1)
-            hasSlash = true
-        }
-
-        val sb = StringBuilder("^")
-        if (!hasSlash) {
-            sb.append("(?:.*/)?")
-        }
-
-        val len = pattern.length
-        var i = 0
-        while (i < len) {
-            val c = pattern[i]
-            when {
-                c == '\\' -> {
-                    if (i + 1 < len) {
-                        val next = pattern[i + 1]
-                        when (next) {
-                            '*', '?', '[', ']', '{', '}', '!', '\\', ' ', '#', '.', '(', ')', '+', '^', '$', '|' -> {
-                                sb.append('\\').append(next)
-                            }
-                            else -> {
-                                sb.append(next)
-                            }
-                        }
-                        i += 2
-                    } else {
-                        sb.append('\\')
-                        i++
-                    }
-                }
-                c == '*' -> {
-                    if (i + 1 < len && pattern[i + 1] == '*') {
-                        val prevSlash = (i == 0 || pattern[i - 1] == '/')
-                        val afterDouble = i + 2
-                        val nextSlash = (afterDouble >= len || pattern[afterDouble] == '/')
-                        if (prevSlash && nextSlash) {
-                            if (afterDouble < len && pattern[afterDouble] == '/') {
-                                sb.append("(?:.*/)?")
-                                i = afterDouble + 1
-                            } else if (i > 0 && pattern[i - 1] == '/') {
-                                sb.append(".*")
-                                i = afterDouble
-                            } else {
-                                sb.append(".*")
-                                i = afterDouble
-                            }
-                        } else {
-                            // Embedded ** behaves as single * in wildmatch
-                            sb.append("[^/]*")
-                            i = afterDouble
-                        }
-                    } else {
-                        sb.append("[^/]*")
-                        i++
-                    }
-                }
-                c == '?' -> {
-                    sb.append("[^/]")
-                    i++
-                }
-                c == '[' -> {
-                    val closing = findClosingBracketGit(pattern, i)
-                    if (closing != -1) {
-                        var classContent = pattern.substring(i + 1, closing)
-                        if (classContent.startsWith('!') || classContent.startsWith('^')) {
-                            classContent = "^" + classContent.substring(1)
-                        }
-                        sb.append("[").append(classContent).append("]")
-                        i = closing + 1
-                    } else {
-                        sb.append("\\[")
-                        i++
-                    }
-                }
-                c in setOf('.', '(', ')', '+', '^', '$', '|', '{', '}') -> {
-                    sb.append('\\').append(c)
-                    i++
-                }
-                else -> {
-                    sb.append(c)
-                    i++
-                }
-            }
-        }
-
-        sb.append("$")
-        return sb.toString()
-    }
-
     private fun findClosingBrace(pattern: String, openIdx: Int): Int {
         var depth = 0
         var i = openIdx
@@ -280,21 +149,6 @@ object PathPatternMatcher {
     private fun findClosingBracket(pattern: String, openIdx: Int): Int {
         var i = openIdx + 1
         if (i < pattern.length && pattern[i] == '!') i++
-        if (i < pattern.length && pattern[i] == ']') i++
-        while (i < pattern.length) {
-            if (pattern[i] == '\\' && i + 1 < pattern.length) {
-                i += 2
-                continue
-            }
-            if (pattern[i] == ']') return i
-            i++
-        }
-        return -1
-    }
-
-    private fun findClosingBracketGit(pattern: String, openIdx: Int): Int {
-        var i = openIdx + 1
-        if (i < pattern.length && (pattern[i] == '!' || pattern[i] == '^')) i++
         if (i < pattern.length && pattern[i] == ']') i++
         while (i < pattern.length) {
             if (pattern[i] == '\\' && i + 1 < pattern.length) {
@@ -357,11 +211,10 @@ object PathPatternMatcher {
      */
     fun compile(
         patternText: String,
-        syntax: PatternSyntax,
-        dialect: GlobDialect = GlobDialect.STANDARD
+        syntax: PatternSyntax
     ): Pattern {
         val regex = when (syntax) {
-            PatternSyntax.GLOB -> globToRegex(patternText, dialect)
+            PatternSyntax.GLOB -> globToRegex(patternText)
             PatternSyntax.REGEX -> patternText
         }
         return Pattern.compile(regex, Pattern.CASE_INSENSITIVE)

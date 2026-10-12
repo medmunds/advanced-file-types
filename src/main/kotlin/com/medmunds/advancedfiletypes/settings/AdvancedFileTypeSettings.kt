@@ -14,8 +14,7 @@ import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.xmlb.annotations.XCollection
 import com.intellij.util.xmlb.annotations.XMap
-import com.medmunds.advancedfiletypes.gitattributes.GitAttributesReader
-import com.medmunds.advancedfiletypes.gitattributes.GitAttributesRule
+import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
 import com.medmunds.advancedfiletypes.gitattributes.LinguistLanguageResolver
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PathPatternMatcher
@@ -183,23 +182,16 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
             }
         }
 
-        // 3. Check .gitattributes linguist-language (last matching rule wins) if enabled
-        // Git attributes only apply to files inside the directory containing .gitattributes
+        // 3. Check .gitattributes linguist-language if enabled
         if (includeGitAttributes && gitAttributesRelativePath != null) {
-            val gitAttributesRules = GitAttributesReader.readRules(project)
-            var lastMatchedRule: GitAttributesRule? = null
-            for (rule in gitAttributesRules) {
-                if (rule.matches(gitAttributesRelativePath, fileName)) {
-                    lastMatchedRule = rule
-                }
-            }
-            if (lastMatchedRule != null && !lastMatchedRule.isUnset && !lastMatchedRule.language.isNullOrBlank()) {
-                val language = lastMatchedRule.language
+            val service = project.getService(GitAttributesService::class.java)
+            val language = service?.getLanguage(gitAttributesRelativePath)
+            if (language != null) {
                 val fileType = LinguistLanguageResolver.resolveFileType(language)
                 if (fileType != null) {
-                    return MatchResult.GitAttributesMatch(lastMatchedRule.pattern, language, fileType)
+                    return MatchResult.GitAttributesMatch(gitAttributesRelativePath, language, fileType)
                 } else if (firstUnsupportedMatch == null) {
-                    firstUnsupportedMatch = MatchResult.GitAttributesUnsupportedMatch(lastMatchedRule.pattern, language)
+                    firstUnsupportedMatch = MatchResult.GitAttributesUnsupportedMatch(gitAttributesRelativePath, language)
                 }
             }
         }

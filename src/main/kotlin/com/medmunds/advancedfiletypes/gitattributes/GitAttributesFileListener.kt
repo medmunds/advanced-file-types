@@ -24,7 +24,6 @@ class GitAttributesFileListener : BulkFileListener {
 
             val projectDir = project.guessProjectDir() ?: continue
             val projectDirPath = projectDir.path.replace('\\', '/')
-            val projectGitAttrPath = "$projectDirPath/.gitattributes"
 
             var projectAffected = false
             for (event in events) {
@@ -32,10 +31,11 @@ class GitAttributesFileListener : BulkFileListener {
                 val oldPath = (event as? VFilePropertyChangeEvent)?.oldPath?.replace('\\', '/')
                     ?: (event as? VFileMoveEvent)?.oldPath?.replace('\\', '/')
 
-                if (isMatchingPath(path, projectGitAttrPath) ||
-                    (oldPath != null && isMatchingPath(oldPath, projectGitAttrPath))
+                if (isGitAttributesEvent(path, projectDirPath) ||
+                    (oldPath != null && isGitAttributesEvent(oldPath, projectDirPath))
                 ) {
-                    GitAttributesReader.clearCache(projectGitAttrPath)
+                    val service = project.getService(GitAttributesService::class.java)
+                    service?.clearCache()
                     projectAffected = true
                     break
                 }
@@ -57,7 +57,9 @@ class GitAttributesFileListener : BulkFileListener {
         }
     }
 
-    private fun isMatchingPath(eventPath: String, projectGitAttrPath: String): Boolean {
-        return eventPath == projectGitAttrPath || projectGitAttrPath.startsWith("$eventPath/")
+    private fun isGitAttributesEvent(path: String, projectDirPath: String): Boolean {
+        if (!path.startsWith(projectDirPath)) return false
+        val fileName = path.substringAfterLast('/')
+        return fileName == ".gitattributes" || path.endsWith("/.git/info/attributes")
     }
 }
