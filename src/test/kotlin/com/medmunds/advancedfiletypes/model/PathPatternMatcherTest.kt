@@ -134,14 +134,43 @@ class PathPatternMatcherTest {
         assertEquals(expectedMatch, result)
     }
 
-    @ParameterizedTest(name = "Standard glob '/*.txt' normalizes leading slash and matches anywhere: path=''{0}'', file=''{1}'' -> {2}")
+    @ParameterizedTest(name = "Standard glob '/*.txt' anchors to project root directory: path=''{0}'', file=''{1}'' -> {2}")
     @CsvSource(
         "file.txt, file.txt, true",
-        "docs/file.txt, file.txt, true",
-        "docs/sub/file.txt, file.txt, true"
+        "docs/file.txt, file.txt, false",
+        "docs/sub/file.txt, file.txt, false"
     )
-    fun testStandardGlobLeadingSlashNormalization(relativePath: String, fileName: String, expectedMatch: Boolean) {
+    fun testStandardGlobLeadingSlashRootAnchored(relativePath: String, fileName: String, expectedMatch: Boolean) {
         val pattern = PathPatternMatcher.compile("/*.txt", PatternSyntax.GLOB)
+        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
+        assertEquals(expectedMatch, result)
+    }
+
+    @ParameterizedTest(name = "Standard glob './*.txt' anchors to project root directory: path=''{0}'', file=''{1}'' -> {2}")
+    @CsvSource(
+        "file.txt, file.txt, true",
+        "docs/file.txt, file.txt, false",
+        "docs/sub/file.txt, file.txt, false"
+    )
+    fun testStandardGlobDotSlashRootAnchored(relativePath: String, fileName: String, expectedMatch: Boolean) {
+        val pattern = PathPatternMatcher.compile("./*.txt", PatternSyntax.GLOB)
+        val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
+        assertEquals(expectedMatch, result)
+    }
+
+    @ParameterizedTest(name = "Standard glob root anchored with alternatives '/*.(txt|html)': pattern=''{0}'', path=''{1}'', file=''{2}'' -> {3}")
+    @CsvSource(
+        "'/*.{txt,html}', 'file.txt', 'file.txt', true",
+        "'/*.{txt,html}', 'index.html', 'index.html', true",
+        "'/*.{txt,html}', 'docs/file.txt', 'file.txt', false",
+        "'/*.{txt,html}', 'docs/index.html', 'index.html', false",
+        "'{/*.txt,/*.html}', 'file.txt', 'file.txt', true",
+        "'{/*.txt,/*.html}', 'index.html', 'index.html', true",
+        "'{/*.txt,/*.html}', 'docs/file.txt', 'file.txt', false",
+        "'{/*.txt,/*.html}', 'docs/index.html', 'index.html', false"
+    )
+    fun testStandardGlobRootAnchoredAlternatives(patternText: String, relativePath: String, fileName: String, expectedMatch: Boolean) {
+        val pattern = PathPatternMatcher.compile(patternText, PatternSyntax.GLOB)
         val result = PathPatternMatcher.matches(pattern, relativePath, fileName)
         assertEquals(expectedMatch, result)
     }

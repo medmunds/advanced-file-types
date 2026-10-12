@@ -19,14 +19,17 @@ object PathPatternMatcher {
      */
     fun globToRegex(glob: String): String {
         var pattern = glob.trim().replace('\\', '/')
-        if (pattern.startsWith("./")) {
-            pattern = pattern.substring(2)
-        }
-        if (pattern.startsWith("/")) {
-            pattern = pattern.substring(1)
+        var isExplicitlyPathAnchored = false
+        while (pattern.startsWith("./") || pattern.startsWith('/')) {
+            isExplicitlyPathAnchored = true
+            if (pattern.startsWith("./")) {
+                pattern = pattern.substring(2)
+            } else if (pattern.startsWith('/')) {
+                pattern = pattern.substring(1)
+            }
         }
 
-        val hasSlash = pattern.contains('/')
+        val hasSlash = isExplicitlyPathAnchored || pattern.contains('/')
         val sb = StringBuilder("^")
         if (!hasSlash) {
             sb.append("(?:.*/)?")
@@ -38,29 +41,38 @@ object PathPatternMatcher {
     }
 
     private fun convertGlobFragment(fragment: String, sb: StringBuilder) {
-        val len = fragment.length
+        var frag = fragment
+        while (frag.startsWith("./") || frag.startsWith('/')) {
+            if (frag.startsWith("./")) {
+                frag = frag.substring(2)
+            } else if (frag.startsWith('/')) {
+                frag = frag.substring(1)
+            }
+        }
+
+        val len = frag.length
         var i = 0
         while (i < len) {
-            when (val c = fragment[i]) {
+            when (val c = frag[i]) {
                 '*' -> {
-                    if (i + 1 < len && fragment[i + 1] == '*') {
+                    if (i + 1 < len && frag[i + 1] == '*') {
                         // Collapse consecutive '*' characters
                         var j = i + 2
-                        while (j < len && fragment[j] == '*') {
+                        while (j < len && frag[j] == '*') {
                             j++
                         }
                         // Collapse consecutive /**/ sequences
-                        while (j < len && fragment[j] == '/') {
+                        while (j < len && frag[j] == '/') {
                             var k = j + 1
-                            if (k + 1 < len && fragment[k] == '*' && fragment[k + 1] == '*') {
+                            if (k + 1 < len && frag[k] == '*' && frag[k + 1] == '*') {
                                 k += 2
-                                while (k < len && fragment[k] == '*') k++
+                                while (k < len && frag[k] == '*') k++
                                 j = k
                             } else {
                                 break
                             }
                         }
-                        if (j < len && fragment[j] == '/') {
+                        if (j < len && frag[j] == '/') {
                             // **/
                             if (!sb.endsWith("(?:.*/)?")) {
                                 sb.append("(?:.*/)?")
@@ -92,9 +104,9 @@ object PathPatternMatcher {
                     i++
                 }
                 '{' -> {
-                    val closing = findClosingBrace(fragment, i)
+                    val closing = findClosingBrace(frag, i)
                     if (closing != -1) {
-                        val choices = splitChoices(fragment.substring(i + 1, closing))
+                        val choices = splitChoices(frag.substring(i + 1, closing))
                         sb.append("(?:")
                         for ((idx, choice) in choices.withIndex()) {
                             if (idx > 0) sb.append("|")
@@ -108,9 +120,9 @@ object PathPatternMatcher {
                     }
                 }
                 '[' -> {
-                    val closing = findClosingBracket(fragment, i)
+                    val closing = findClosingBracket(frag, i)
                     if (closing != -1) {
-                        val classContent = fragment.substring(i + 1, closing)
+                        val classContent = frag.substring(i + 1, closing)
                         sb.append(convertCharacterClass(classContent))
                         i = closing + 1
                     } else {

@@ -40,10 +40,10 @@ When resolving a file's type, rules are evaluated in the following strict order,
 ### Pattern Matching Semantics (`PathPatternMatcher`)
 - **Glob Syntax**: Compatible with [VS Code Glob Patterns](https://code.visualstudio.com/docs/editor/glob-patterns) (`*`, `?`, `**`, `{a,b,...}`, `[a-z]`, `[!a-z]`, `[^a-z]`, and bracket escapes like `[[]` and `[]]`).
 - **Globs without `/`**: Match against filename only, anywhere in the project hierarchy (e.g., `*.txt` matches `file.txt` and `dir/sub/file.txt`). This aligns with JetBrains conventions and VS Code's `files.associations` filename pattern matching.
-- **Globs with `/`**: Match against the full project-relative path from the project root (e.g., `docs/*.txt`).
+- **Globs with `/`**: Match against the full project-relative path from the project root (e.g., `docs/*.txt`, or `/*.html` / `./*.html` to match root-only files).
 - **Regex**: Always evaluated against the entire project-relative path with normalized `/` separators, case-insensitive, anchored to the full string (`^...$`).
 - **Case Sensitivity**: Retained case-insensitive on all platforms for both user-entered patterns and `.vscode/settings.json` associations for cross-platform consistency.
-- **Path Normalization**: Windows backslashes `\` are always normalized to `/`. Leading `/` and `./` in globs are stripped.
+- **Path Normalization**: Windows backslashes `\` are always normalized to `/`. Leading `/` and `./` anchor the glob to the project root.
 
 ### Key Components & Package Structure
 `com.medmunds.advancedfiletypes`

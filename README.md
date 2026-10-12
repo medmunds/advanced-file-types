@@ -55,9 +55,8 @@ Glob patterns follow [VS Code's glob syntax][vscode-glob-patterns] and support `
 
 * Use `/` as the directory separator, even on Windows. (Backslashes in Windows paths are converted to `/` before matching.)
 * Glob patterns **without `/`** match a *filename* anywhere in the project. (`*.txt` matches `readme.txt` and `docs/help/faq.txt` but not `docs/intro.txt.bak`.)
-* Glob patterns **with `/`** match a *full path* starting at project root. (`docs/*.txt` matches `docs/intro.txt` but not `readme.txt` or `public/docs/faq.txt`.) Use `**` match multiple path segments.
+* Glob patterns **with `/`** anywhere match a *full path* starting at project root. (`docs/*.txt` matches `docs/intro.txt` but not `readme.txt` or `public/docs/faq.txt`. `/*.txt` or `./*.txt` matches `readme.txt` in the root directory but not `docs/intro.txt`.) Use `**` to match multiple path segments.
 * Matching is **case-insensitive** on all operating systems.
-* Leading `./` and `/` are ignored in glob patterns.
 * You cannot use backslash to escape characters in glob patterns. Use the `[...]` syntax instead: `[[]` to match a literal `[`, `[}]` to match `}`, etc.
 
 [vscode-glob-patterns]: https://code.visualstudio.com/docs/editor/glob-patterns
