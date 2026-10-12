@@ -1,5 +1,6 @@
 package com.medmunds.advancedfiletypes.gitattributes
 
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
@@ -29,11 +30,9 @@ class GitAttributesFileListener : BulkFileListener {
                 val oldPath = (event as? VFilePropertyChangeEvent)?.oldPath?.replace('\\', '/')
                     ?: (event as? VFileMoveEvent)?.oldPath?.replace('\\', '/')
 
-                if (isGitAttributesEvent(path, projectDirPath) ||
-                    (oldPath != null && isGitAttributesEvent(oldPath, projectDirPath))
+                if (affectsProjectAttributes(path, projectDirPath, project) ||
+                    (oldPath != null && affectsProjectAttributes(oldPath, projectDirPath, project))
                 ) {
-                    val service = project.getService(GitAttributesService::class.java)
-                    service?.clearCache()
                     projectAffected = true
                     break
                 }
@@ -52,14 +51,22 @@ class GitAttributesFileListener : BulkFileListener {
         }
     }
 
-    private fun isGitAttributesEvent(path: String, projectDirPath: String): Boolean {
+    private fun affectsProjectAttributes(path: String, projectDirPath: String, project: Project): Boolean {
         if (!path.startsWith(projectDirPath)) return false
         val relPath = path.removePrefix(projectDirPath).removePrefix("/")
         val fileName = path.substringAfterLast('/')
-        return fileName == ".gitattributes"
-            || relPath == ".git"
-            || relPath.startsWith(".git/")
-            || relPath.contains("/.git/")
-            || relPath.endsWith("/.git")
+
+        if (fileName == ".gitattributes" || relPath == ".git/info/attributes" || relPath.endsWith("/.git/info/attributes")) {
+            val service = project.getService(GitAttributesService::class.java)
+            service?.clearCache()
+            return true
+        }
+
+        if (relPath == ".git" || relPath.endsWith("/.git")) {
+            val service = project.getService(GitAttributesService::class.java)
+            return service?.onRepositoryStateChanged() ?: false
+        }
+
+        return false
     }
 }

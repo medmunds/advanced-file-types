@@ -44,8 +44,6 @@
     <projectListeners>
         <listener class="com.medmunds.advancedfiletypes.gitattributes.GitRepositoryEventListener"
                   topic="com.intellij.dvcs.repo.VcsRepositoryMappingListener"/>
-        <listener class="com.medmunds.advancedfiletypes.gitattributes.GitRepositoryEventListener"
-                  topic="git4idea.repo.GitRepositoryChangeListener"/>
     </projectListeners>
 
 </idea-plugin>

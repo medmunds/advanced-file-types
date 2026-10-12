@@ -38,6 +38,7 @@ class GitAttributesService(private val project: Project) : Disposable {
 
     private var currentSession: ProcessSession? = null
     private var isGitUnavailable = false
+    private var lastKnownGitAvailable: Boolean = false
     private var lastAccessTime = System.currentTimeMillis()
 
     private val idleCheckFuture: Future<*>? = try {
@@ -46,6 +47,10 @@ class GitAttributesService(private val project: Project) : Disposable {
         }, IDLE_CHECK_INTERVAL_SECONDS, IDLE_CHECK_INTERVAL_SECONDS, TimeUnit.SECONDS)
     } catch (_: Exception) {
         null
+    }
+
+    init {
+        lastKnownGitAvailable = isGitAvailable()
     }
 
     private class ProcessSession(
@@ -72,7 +77,7 @@ class GitAttributesService(private val project: Project) : Disposable {
      * Checks whether Git and a Git repository are available for this project.
      */
     fun isGitAvailable(): Boolean {
-        if (project.isDisposed || !project.isInitialized || project.isDefault) {
+        if (project.isDisposed || project.isDefault) {
             return false
         }
         if (customProjectDirectory != null) {
@@ -92,6 +97,22 @@ class GitAttributesService(private val project: Project) : Disposable {
                 return true
             }
             dir = dir.parentFile
+        }
+        return false
+    }
+
+    /**
+     * Notifies the service that VCS or Git repository mapping state may have changed.
+     * If Git availability transitioned (e.g. from unavailable to available or vice versa),
+     * resets cache and returns true so callers can notify file type changes.
+     */
+    fun onRepositoryStateChanged(): Boolean {
+        val currentlyAvailable = isGitAvailable()
+        val availabilityChanged = (currentlyAvailable != lastKnownGitAvailable) || (currentlyAvailable && isGitUnavailable)
+        if (availabilityChanged) {
+            lastKnownGitAvailable = currentlyAvailable
+            clearCache()
+            return true
         }
         return false
     }
@@ -144,6 +165,7 @@ class GitAttributesService(private val project: Project) : Disposable {
             isGitUnavailable = false
             currentSession?.close()
             currentSession = null
+            lastKnownGitAvailable = isGitAvailable()
         }
     }
 

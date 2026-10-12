@@ -149,7 +149,7 @@ class GitAttributesServiceTest : BasePlatformTestCase() {
         Assert.assertEquals("JSON", service.getLanguage("sample.foo"))
         Assert.assertTrue(service.isCached("sample.foo"))
 
-        // Trigger listener on a background thread without read action (simulating VcsRepositoryManager)
+        // Trigger listener on a background thread without read action (simulating VcsRepositoryManager on startup)
         val listener = GitRepositoryEventListener(project)
         var backgroundError: Throwable? = null
         val thread = Thread({
@@ -164,7 +164,17 @@ class GitAttributesServiceTest : BasePlatformTestCase() {
 
         Assert.assertNull("Listener on background thread should not throw read action exception", backgroundError)
 
-        // Cache should be cleared
-        Assert.assertFalse("Cache should be cleared after mapping change event", service.isCached("sample.foo"))
+        // When availability does not transition (e.g. during normal startup in a git project), cache is preserved
+        Assert.assertTrue("Cache should be preserved when repo availability did not change", service.isCached("sample.foo"))
+
+        // When repo availability transitions (e.g. repo removed or added), cache is cleared
+        val nonGitDir = createTempDirectory("non-git-switch").toFile()
+        try {
+            service.customProjectDirectory = nonGitDir
+            listener.mappingChanged()
+            Assert.assertFalse("Cache should be cleared after repo availability transition", service.isCached("sample.foo"))
+        } finally {
+            nonGitDir.deleteRecursively()
+        }
     }
 }
