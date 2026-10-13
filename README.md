@@ -9,17 +9,17 @@ A plugin for JetBrains IDEs that enables project-specific file type associations
 
 * **Custom pattern matching:** Define custom file type patterns using globs or regular expressions. Patterns can match filenames or full paths and are applied in the order you specify.
 
-  <!-- TODO: Screenshot of the settings UI showing a few configured override rules in the table -->
+  <img alt="Pattern matching rules configuration" src="img/rules.png" width="632">
 
 * **Per-project settings:** Rules are applied to the current project only. The IDE's global *File Types* apply if no project rule matches. Settings are stored in `.idea/advancedFileTypes.xml` and can be committed to your repo to share.
 
-* **VS Code settings compatibility:** Reads `files.associations` from `.vscode/settings.json` and applies them as file type overrides. (Optional.)
+* **Pattern tester:** Check that your patterns do what you want.
 
-  <!-- TODO: Cropped screenshot of the settings UI showing the VS Code integration checkbox and the pattern tester matching a `.vscode/settings.json` rule -->
+  <img alt="Test Pattern Match in the settings" src="img/test-matching.png" width="456">
 
-* **GitHub Linguist compatibility:** Reads `linguist-language` information from `.gitattributes` and applies it as file type overrides. (Optional.)
+* **VS Code settings and GitHub Linguist compatibility:** Optionally load file type associations from `.vscode/settings.json` (`files.associations`) and from `.gitattributes` (`linguist-language`).
 
-  <!-- TODO: Cropped screenshot of the settings UI showing the gitattributes checkbox and the pattern tester matching a gitattributes rule -->
+  <img alt="VS Code and gitattributes checkboxes" src="img/vscode-and-gitattributes.png" width="347"/>
 
 * **Free and open source**
 
