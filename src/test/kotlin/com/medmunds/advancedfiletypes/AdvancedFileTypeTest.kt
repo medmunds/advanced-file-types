@@ -231,7 +231,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
     }
 
     fun testMessageBundleKeys() {
-        Assert.assertEquals("File Type Matching", AdvancedFileTypesBundle.message("settings.displayName"))
+        Assert.assertEquals("Advanced File Types", AdvancedFileTypesBundle.message("settings.displayName"))
         Assert.assertEquals("Pattern", AdvancedFileTypesBundle.message("settings.table.column.pattern"))
         Assert.assertEquals("Syntax", AdvancedFileTypesBundle.message("settings.table.column.syntax"))
         Assert.assertEquals("File Type", AdvancedFileTypesBundle.message("settings.table.column.fileType"))
