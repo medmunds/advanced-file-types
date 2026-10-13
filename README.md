@@ -78,9 +78,9 @@ VS Code file type associations are read from the `files.associations` section in
 
 GitHub language IDs are read from `linguist-language` properties in `.gitattributes` files. (The plugin delegates git attribute parsing to `git`, so this only works in projects that are actually in a git repository.)
 
-In both cases, the plugin tries to map the [VS Code language identifier][vscode-language-id] or [GitHub Linguist ID/alias][linguist-language-id] to a JetBrains file type, based on mappings built into the plugin or case-insensitive comparison to the IDE's supported file type names. (Please open an issue for incorrect or missing mappings.) If no IDE language can be determined, the plugin will ignore the rule and not override the file type.
+In both cases, the plugin tries to map the [VS Code language identifier][vscode-language-id] or [GitHub Linguist ID/alias][linguist-language-id] to a JetBrains IDE file type. If no IDE type can be determined, the plugin will ignore the rule. The pattern tester will show "unknown VS Code id" or "unknown Linguist id."
 
-If the mapped JetBrains file type is not supported by your IDE, the plugin will ignore the rule and not override the file type. The pattern tester will identify the file type as "unsupported in this IDE."
+Even when the plugin *can* determine the correct IDE file type, it may require a plugin you don't have installed or a different IDE. In that case the rule will also be ignored and global File Types will apply. The pattern tester will show the file type with "no IDE support."
 
 [vscode-language-id]: https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
 
