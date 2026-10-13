@@ -8,9 +8,9 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.ui.ComboboxSpeedSearch
-import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.listCellRenderer.listCellRenderer
 import com.medmunds.advancedfiletypes.AdvancedFileTypesBundle
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PathPatternMatcher
@@ -24,10 +24,8 @@ class AddEditRuleDialog(
 
     private val patternField = JBTextField(existingRule?.pattern ?: "", 30)
     private val syntaxCombo = ComboBox(PatternSyntax.entries.toTypedArray()).apply {
-        renderer = SimpleListCellRenderer.create { label, value, _ ->
-            if (value != null) {
-                label.text = value.displayName
-            }
+        renderer = listCellRenderer {
+            value?.let { text(it.displayName) }
         }
         selectedItem = existingRule?.syntax ?: PatternSyntax.GLOB
     }
@@ -36,10 +34,10 @@ class AddEditRuleDialog(
         .sortedBy { it.displayName.ifBlank { it.name }.lowercase() }
 
     internal val fileTypeCombo = ComboBox(availableFileTypes.toTypedArray()).apply {
-        renderer = SimpleListCellRenderer.create { label, value, _ ->
-            if (value != null) {
-                label.icon = FileTypeDisplayHelper.iconFor(value)
-                label.text = FileTypeDisplayHelper.displayText(value)
+        renderer = listCellRenderer {
+            value?.let { fileType ->
+                FileTypeDisplayHelper.iconFor(fileType)?.let { icon(it) }
+                text(FileTypeDisplayHelper.displayText(fileType))
             }
         }
         ComboboxSpeedSearch.installSpeedSearch(this) { fileType ->
