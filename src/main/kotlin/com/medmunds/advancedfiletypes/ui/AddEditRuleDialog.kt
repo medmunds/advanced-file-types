@@ -24,6 +24,7 @@ class AddEditRuleDialog(
 
     private val patternField = JBTextField(existingRule?.pattern ?: "", 30)
     private val syntaxCombo = ComboBox(PatternSyntax.entries.toTypedArray()).apply {
+        @Suppress("UnstableApiUsage")
         renderer = listCellRenderer {
             value?.let { text(it.displayName) }
         }
@@ -34,6 +35,7 @@ class AddEditRuleDialog(
         .sortedBy { it.displayName.ifBlank { it.name }.lowercase() }
 
     internal val fileTypeCombo = ComboBox(availableFileTypes.toTypedArray()).apply {
+        @Suppress("UnstableApiUsage")
         renderer = listCellRenderer {
             value?.let { fileType ->
                 FileTypeDisplayHelper.iconFor(fileType)?.let { icon(it) }

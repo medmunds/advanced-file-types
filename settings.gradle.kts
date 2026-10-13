@@ -16,6 +16,7 @@ plugins {
 
 dependencyResolutionManagement {
     // Configure all projects' repositories
+    @Suppress("UnstableApiUsage")
     repositories {
         mavenCentral()
 
