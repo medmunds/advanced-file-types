@@ -8,27 +8,35 @@
     <name>Advanced File Types</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://www.github.com/medmunds/advanced-file-types">Mike Edmunds</vendor>
+    <vendor url="https://github.com/medmunds/advanced-file-types">Mike Edmunds</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Extends the IDE's global File Types with project-specific overrides, using glob or regex patterns.
+        Per-project file types using glob or regex.
 
         <ul>
-            <li><strong>Custom pattern matching:</strong>
-                Globs or regular expressions, match filenames or full paths.
-                Change HTML to Jinja2 only in <code>templates/**/*.html</code>.</li>
-            <li><strong>Per-project settings:</strong>
-                Treat <code>*.sql</code> as MySQL in one project and PostgreSQL in another.</li>
-            <li><strong>Pattern tester:</strong>
-                Check that your patterns do what you want.</li>
-            <li><strong>VS Code and GitHub Linguist compatibility:</strong>
-                Optionally load file type associations from <code>.vscode/settings.json</code>
-                and <code>.gitattributes</code>.</li>
+            <li><strong>Project-specific file types:</strong>
+                Override the global <em>File Types</em> settings at the project level.</li>
+            <li><strong>Flexible pattern matching:</strong>
+                Use globs (including <code>**</code>) and regular expressions.
+                Match filenames or full directory paths in priority order.</li>
+            <li><strong>VS Code and .gitattributes support:</strong>
+                Optionally load file type associations from .vscode/settings.json
+                or Git linguist-language attributes.</li>
+            <li><strong>Integrated pattern tester:</strong>
+                Easily verify rules and imported associations.</li>
             <li><strong>Free and open source:</strong>
-                <a href="https://github.com/medmunds/advanced-file-types">Code and docs</a> -
+                <a href="https://github.com/medmunds/advanced-file-types">Code and docs</a> –
                 <a href="https://github.com/medmunds/advanced-file-types/issues">Issues</a></li>
+        </ul>
+
+        <p>The <strong>Advanced File Types</strong> plugin lets you…</p>
+        <ul>
+            <li>Change <code>*.html</code> to Handlebars in one project and EJS in another.</li>
+            <li>Treat <code>docs/**/*.txt</code> as Markdown but other <code>.txt</code> files as plain text.</li>
+            <li>Enable JSON5 syntax for everything under <code>config/</code>.</li>
+            <li>Stop reassigning <code>.tpl</code> or <code>.conf</code> every time you switch projects.</li>
         </ul>
         ]]></description>
 

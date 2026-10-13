@@ -1,37 +1,44 @@
 # Advanced File Types plugin for JetBrains IDEs
 
-A plugin for JetBrains IDEs that enables project-specific file type associations.
-* Treat `templates/**/*.html` as Jinja2 while leaving other `.html` files as plain HTML.
-* Handle `*.sql` as MySQL in one project and PostgreSQL in another.
-* Use file type rules from VS Code settings or GitHub Linguist associations stored with the project.
+The **Advanced File Types** plugin extends the standard file type associations in JetBrains IDEs. With it installed, you can…
+
+* Change `*.html` to Handlebars in one project and EJS in another.
+* Treat `docs/**/*.txt` as Markdown but other `.txt` files as plain text.
+* Enable JSON5 syntax for everything under `config/`.
+* Stop reassigning `.tpl` or `.conf` every time you switch projects.
+* Load file type associations from VS Code settings or GitHub Linguist attributes stored with the project.
 
 ## Features
+<!--suppress CheckImageSize -->
 
-* **Custom pattern matching:** Define custom file type patterns using globs or regular expressions. Patterns can match filenames or full paths and are applied in the order you specify.
+* **Project-specific file types:** Override the global file types settings at the project level.
+
+* **Flexible pattern matching:** Use [globs](#glob-patterns) (including `**`) and [regular expressions](#regular-expression-patterns) (including negative lookahead). Match filenames or full directory paths in priority order.
 
   <img alt="Pattern matching rules configuration" src="img/rules.png" width="632">
 
-* **Per-project settings:** Rules are applied to the current project only. The IDE's global *File Types* apply if no project rule matches. Settings are stored in `.idea/advancedFileTypes.xml` and can be committed to your repo to share.
-
-* **Pattern tester:** Check that your patterns do what you want.
-
-  <img alt="Test Pattern Match in the settings" src="img/test-matching.png" width="456">
-
-* **VS Code settings and GitHub Linguist compatibility:** Optionally load file type associations from `.vscode/settings.json` (`files.associations`) and from `.gitattributes` (`linguist-language`).
+* **VS Code and .gitattributes support:** Optionally load file type associations from `.vscode/settings.json` or Git `linguist-language` attributes.
 
   <img alt="VS Code and gitattributes checkboxes" src="img/vscode-and-gitattributes.png" width="347"/>
+
+* **Integrated pattern tester:**
+    Easily verify rules and imported associations.
+
+  <img alt="'Test Pattern Match' in the settings" src="img/test-matching.png" width="456">
 
 * **Free and open source**
 
 ## Installation
 
-The Advanced File Types plugin should work with any JetBrains IDE version 2025.3 or later.
+The **Advanced File Types** plugin should work with any[^1] JetBrains IDE version 2025.3 and later.
 
 1. Open **Settings | Plugins**
 2. Search for **Advanced File Types** in the marketplace
 3. Click **Install**
 
 Alternatively, download the latest release from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/XXXXX-advanced-file-types).
+
+[^1]: DataGrip users may also need to install Git support (Plugin ID `Git4Idea`), which comes bundled with all other JetBrains IDEs.
 
 ## Usage
 
@@ -43,11 +50,13 @@ Configure file type overrides in **Settings | Editor | Advanced File Types**.
 
 The plugin applies matching rules in this order, stopping at the first match:
 
-* Custom patterns from top to bottom
-* `.vscode/settings.json` (if enabled)
-* `.gitattributes` (if enabled)
+1. Custom patterns from top to bottom
+2. `.vscode/settings.json` (if enabled)
+3. `.gitattributes` (if enabled)
 
 If none of those match a particular file, the IDE's global rules from **Settings | Editor | File Types** apply.
+
+Project settings are stored in `.idea/advancedFileTypes.xml`. Commit this file to your repo to share it.
 
 ### Glob patterns
 
@@ -74,31 +83,38 @@ Regex syntax follows Java's [`java.util.regex.Pattern`][java-regex] with case-in
 
 ### VS Code settings and .gitattributes linguist-language support
 
-VS Code file type associations are read from the `files.associations` section in `.vscode/settings.json`. (Patterns are treated as case-insensitive on all platforms, which doesn't strictly match VS Code. The plugin only checks the root `.vscode/settings.json` file. Multi-root workspaces are not currently supported.)
+VS Code file type associations are read from the `files.associations` section in `.vscode/settings.json`. (Patterns are treated as case-insensitive on all platforms, which doesn't strictly match VS Code's behavior. The plugin only checks the root `.vscode/settings.json` file. Multi-root workspaces and user global settings are not currently supported.)
 
-GitHub language IDs are read from `linguist-language` properties in `.gitattributes` files. (The plugin delegates git attribute parsing to `git`, so this only works in projects that are actually in a git repository.)
+GitHub language IDs are read from `linguist-language` properties in `.gitattributes` files. (This only works in projects that are actually in a git repository with `git` available. The plugin uses a lightweight `git check-attr` process to get accurate attributes.)
 
-In both cases, the plugin tries to map the [VS Code language identifier][vscode-language-id] or [GitHub Linguist ID/alias][linguist-language-id] to a JetBrains IDE file type. If no IDE type can be determined, the plugin will ignore the rule. The pattern tester will show "unknown VS Code id" or "unknown Linguist id."
+In both cases, the plugin tries to map the [VS Code language identifier][vscode-language-id] or [GitHub Linguist ID/alias][linguist-language-id] to a JetBrains IDE file type. If no IDE type can be determined, the plugin will ignore the rule. If you enter one of these paths in **Test Pattern Matching** you'll see "unknown VS Code id" or "unknown Linguist id."
 
-Even when the plugin *can* determine the correct IDE file type, it may require a plugin you don't have installed or a different IDE. In that case the rule will also be ignored and global File Types will apply. The pattern tester will show the file type with "no IDE support."
+Even when the plugin *can* determine the correct IDE file type, it may require language support that isn't configured in your IDE. In that case the rule will also be ignored and the global *File Types* setting will apply. **Test Pattern Matching** will show that file type with "no IDE support."
+
+The plugin automatically reloads rules whenever the VS Code settings or Git attributes files are changed. (This only watches files inside the project directory. Global Git attributes are respected, but if they change you'll need to clear the checkbox, apply the settings change, and re-enable it to pick up the updates.)
 
 [vscode-language-id]: https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
-
 [linguist-language-id]: https://github.com/github/linguist/blob/master/lib/linguist/languages.yml
 
 ## Why this plugin?
 
-JetBrains [**File Types**][file-types-setting] associations are global to all projects, allow only filename patterns (not path matching), and don't support prioritization of rules. This is insufficient for many real-world use cases. See these JetBrains issues:
+JetBrains [**File Types**][file-types-setting] associations are global to all projects, allow only filename patterns (not path matching), and don't support prioritization of rules. This is insufficient for several real-world use cases. See these long-standing issues:
 
-* [IDEABKL-6335](https://youtrack.jetbrains.com/issue/IDEABKL-6335/Assign-file-types-not-only-globally-but-project-wide-as-well): Assign file types not only globally but project-wide as well
-* [IJPL-2316](https://youtrack.jetbrains.com/issue/IJPL-2316/Dynamic-File-Type-Patterns): Dynamic File Type Patterns
-* [IJPL-52980](https://youtrack.jetbrains.com/issue/IJPL-52980/File-Type-Association-should-use-REGEX-not-just-and-for-pattern-matching): File Type Association should use REGEX not just * and ? for pattern matching
-* [IJPL-3389](https://youtrack.jetbrains.com/issue/IJPL-3389/File-association-prioritization-for-multiple-matching-patterns): File association prioritization for multiple matching patterns
-* [IJPL-258202](https://youtrack.jetbrains.com/issue/IJPL-258202/File-type-associations-Honor-linguist-language-overrides-from-.gitattributes): File type associations: Honor linguist-language overrides from .gitattributes
+* [IDEABKL-6335](https://youtrack.jetbrains.com/issue/IDEABKL-6335/Assign-file-types-not-only-globally-but-project-wide-as-well) "Assign file types not only globally but project-wide as well"
+* [IJPL-2316](https://youtrack.jetbrains.com/issue/IJPL-2316/Dynamic-File-Type-Patterns) "Dynamic File Type Patterns"
+* [IJPL-52980](https://youtrack.jetbrains.com/issue/IJPL-52980/File-Type-Association-should-use-REGEX-not-just-and-for-pattern-matching) "File Type Association should use REGEX not just * and ? for pattern matching"
+* [IJPL-3389](https://youtrack.jetbrains.com/issue/IJPL-3389/File-association-prioritization-for-multiple-matching-patterns) "File association prioritization for multiple matching patterns"
+* [IJPL-258202](https://youtrack.jetbrains.com/issue/IJPL-258202/File-type-associations-Honor-linguist-language-overrides-from-.gitattributes) "File type associations: Honor linguist-language overrides from .gitattributes"
 
 (JetBrains: please feel welcome to adopt, absorb, or otherwise obsolete this plugin!)
 
 [file-types-setting]: https://www.jetbrains.com/help/idea/creating-and-registering-file-types.html#configure-associations-between-filename-patterns-and-file-types
+
+## Screenshots
+
+Here's the whole **Advanced File Types** settings panel:
+
+<img alt="'Advanced File Types' settings panel" src="img/screenshot.png" width="650">
 
 ## Development
 
@@ -110,7 +126,7 @@ To build locally:
 * Clone the repository
 * Run `./gradlew check` to run the tests
 * Run `./gradlew buildPlugin` to build the plugin
-* Install the plugin from the generated `build/distributions/advanced-file-types-<version>.zip` file
+* In your IDE, use **Settings | Plugins | ⚙️ | Install plugin from disk** and select `build/distributions/advanced-file-types-<version>.zip` from your local build.
 
 [releases]: https://github.com/medmunds/advanced-file-types/releases
 [install-plugin-from-disk]: https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk

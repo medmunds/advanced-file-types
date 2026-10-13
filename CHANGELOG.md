@@ -1,7 +1,11 @@
 <!-- Keep a Changelog guide -> https://keepachangelog.com -->
 
-# Advanced-file-types Changelog
+# Advanced File Types Plugin Changelog
 
-## 0.1.0 [Unreleased]
+## [Unreleased]
 
-Initial release.
+### Added
+* Initial release, supporting IDE versions 2025.3 through 2026.3 (EAP).
+* File type overrides using glob or regex patterns.
+* VS Code settings `files.associations` support.
+* .gitattributes `linguist-language` support.
