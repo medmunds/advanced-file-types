@@ -21,10 +21,11 @@
                 Change HTML to Jinja2 only in <code>templates/**/*.html</code>.</li>
             <li><strong>Per-project settings:</strong>
                 Treat <code>*.sql</code> as MySQL in one project and PostgreSQL in another.</li>
-            <li><strong>VS Code settings compatibility:</strong>
-                Reads <code>files.associations</code> from <code>.vscode/settings.json</code>.</li>
-            <li><strong>GitHub Linguist compatibility:</strong>
-                Reads <code>linguist-language</code> information from <code>.gitattributes</code>.</li>
+            <li><strong>Pattern tester:</strong>
+                Check that your patterns do what you want.</li>
+            <li><strong>VS Code and GitHub Linguist compatibility:</strong>
+                Optionally load file type associations from <code>.vscode/settings.json</code>
+                and <code>.gitattributes</code>.</li>
             <li><strong>Free and open source:</strong>
                 <a href="https://github.com/medmunds/advanced-file-types">Code and docs</a> -
                 <a href="https://github.com/medmunds/advanced-file-types/issues">Issues</a></li>
