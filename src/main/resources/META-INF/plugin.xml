@@ -13,7 +13,22 @@
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Use patterns to override file type detection.
+        Extends the IDE's global File Types with project-specific overrides, using glob or regex patterns.
+
+        <ul>
+            <li><strong>Custom pattern matching:</strong>
+                Globs or regular expressions, match filenames or full paths.
+                Change HTML to Jinja2 only in <code>templates/**/*.html</code>.</li>
+            <li><strong>Per-project settings:</strong>
+                Treat <code>*.sql</code> as MySQL in one project and PostgreSQL in another.</li>
+            <li><strong>VS Code settings compatibility:</strong>
+                Reads <code>files.associations</code> from <code>.vscode/settings.json</code>.</li>
+            <li><strong>GitHub Linguist compatibility:</strong>
+                Reads <code>linguist-language</code> information from <code>.gitattributes</code>.</li>
+            <li><strong>Free and open source:</strong>
+                <a href="https://github.com/medmunds/advanced-file-types">Code and docs</a> -
+                <a href="https://github.com/medmunds/advanced-file-types/issues">Issues</a></li>
+        </ul>
         ]]></description>
 
     <!-- Product and plugin compatibility requirements.
