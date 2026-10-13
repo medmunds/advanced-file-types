@@ -1,11 +1,10 @@
 package com.medmunds.advancedfiletypes.vscode
 
-import com.fasterxml.jackson.core.json.JsonReadFeature
-import com.fasterxml.jackson.databind.json.JsonMapper
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import de.marhali.json5.Json5
 import java.util.concurrent.ConcurrentHashMap
 
 data class VsCodeAssociation(
@@ -15,12 +14,7 @@ data class VsCodeAssociation(
 
 object VsCodeSettingsReader {
 
-    private val objectMapper = JsonMapper.builder()
-        .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS)
-        .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
-        .enable(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES)
-        .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-        .build()
+    private val json5 = Json5()
 
     private data class CachedAssociations(
         val modificationStamp: Long,
@@ -88,16 +82,16 @@ object VsCodeSettingsReader {
         if (jsonText.isBlank()) return emptyList()
 
         try {
-            val rootNode = objectMapper.readTree(jsonText) ?: return emptyList()
-            if (!rootNode.isObject) return emptyList()
+            val rootNode = json5.parse(jsonText) ?: return emptyList()
+            if (!rootNode.isJson5Object) return emptyList()
 
-            val associationsNode = rootNode.get("files.associations") ?: return emptyList()
-            if (!associationsNode.isObject) return emptyList()
+            val associationsNode = rootNode.asJson5Object.get("files.associations") ?: return emptyList()
+            if (!associationsNode.isJson5Object) return emptyList()
 
             val result = mutableListOf<VsCodeAssociation>()
-            for ((pattern, langNode) in associationsNode.properties()) {
-                if (langNode != null && langNode.isTextual) {
-                    val langId = langNode.asText().trim()
+            for ((pattern, langElem) in associationsNode.asJson5Object.asMap()) {
+                if (langElem != null && langElem.isJson5Primitive && langElem.asJson5Primitive.isString) {
+                    val langId = langElem.asJson5Primitive.asString.trim()
                     val trimmedPattern = pattern.trim()
                     if (trimmedPattern.isNotEmpty() && langId.isNotEmpty()) {
                         result.add(VsCodeAssociation(trimmedPattern, langId))

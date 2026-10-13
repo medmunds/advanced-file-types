@@ -258,19 +258,22 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
               // Comment line
               /* Multi-line
                  comment */
-              "editor.tabSize": 2,
+              'editor.tabSize': 2,
+              unquotedKey: 'value',
               "files.associations": {
                 "**/docs/**/*.txt": "html",
-                "*.special": "xml", // inline comment
+                '*.special': 'xml', // inline comment
+                unquoted_pattern: 'yaml',
                 "bad": 123,
               },
             }
         """.trimIndent()
 
         val parsed = VsCodeSettingsReader.parseAssociations(jsonc)
-        Assert.assertEquals(2, parsed.size)
+        Assert.assertEquals(3, parsed.size)
         Assert.assertEquals(VsCodeAssociation("**/docs/**/*.txt", "html"), parsed[0])
         Assert.assertEquals(VsCodeAssociation("*.special", "xml"), parsed[1])
+        Assert.assertEquals(VsCodeAssociation("unquoted_pattern", "yaml"), parsed[2])
 
         val emptyParsed = VsCodeSettingsReader.parseAssociations("")
         Assert.assertTrue(emptyParsed.isEmpty())

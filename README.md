@@ -117,4 +117,10 @@ To build locally:
 
 ## License
 
-[MIT License](LICENSE)
+This project is licensed under the [MIT License](LICENSE).
+
+### Third-Party Licenses
+
+This project uses the following third-party software which is bundled in its distribution:
+
+* [json5-java](https://github.com/marhali/json5-java):  [Apache License 2.0](https://github.com/marhali/json5-java/blob/main/LICENSE)

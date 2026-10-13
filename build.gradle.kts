@@ -8,6 +8,8 @@ plugins {
 
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
+    implementation(libs.json5)
+
     testImplementation(libs.junit)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.vintage.engine)
@@ -24,4 +26,10 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.processResources {
+    from("LICENSE") {
+        into("META-INF")
+    }
 }
