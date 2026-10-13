@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - Released 2026-10-13
+
 ### Added
 * Initial release, supporting IDE versions 2025.3 through 2026.3 (EAP).
 * File type overrides using glob or regex patterns.

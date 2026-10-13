@@ -36,7 +36,7 @@ The **Advanced File Types** plugin should work with any[^1] JetBrains IDE versio
 2. Search for **Advanced File Types** in the marketplace
 3. Click **Install**
 
-Alternatively, download the latest release from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/XXXXX-advanced-file-types).
+Alternatively, download the latest release from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35076-advanced-file-types).
 
 [^1]: DataGrip users may also need to install Git support (Plugin ID `Git4Idea`), which comes bundled with all other JetBrains IDEs.
 
