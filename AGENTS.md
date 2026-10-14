@@ -135,3 +135,11 @@ Launches a test IDE instance with the plugin enabled:
 9. **Documentation Currency (`AGENTS.md` & `README.md`):**
    - Keep `AGENTS.md` up to date. Update this document for any significant architectural decisions, component changes, or modifications that would otherwise leave the documentation inaccurate or misleading.
    - Update `README.md` in concert with any changes that affect user-facing features, configuration options, workflows, or supported behavior.
+10. **Third-Party Dependencies & License Compliance (`third-party-licenses.txt` & `README.md`):**
+   - Only select third-party packages whose licenses are compatible with this project's MIT license (e.g., Apache 2.0, MIT, BSD; do not use proprietary, GPL, or other copyleft licenses).
+   - Ensure compliance with all third-party license obligations, including recording attribution, copyright notices, and license text (when required by the license) in `src/main/resources/META-INF/third-party-licenses.txt`.
+   - Always credit every bundled third-party dependency with its license details in the **Third-Party Licenses** section of `README.md`.
+11. **Changelog Maintenance (`CHANGELOG.md`):**
+   - Record user-visible changes under the `[Unreleased]` section of `CHANGELOG.md`.
+   - Only document changes that affect end users (e.g., new features, bug fixes, breaking behavior changes); omit purely internal refactoring, test updates, or developer documentation edits.
+   - Categorize entries following the [Keep a Changelog](https://keepachangelog.com) standard sections (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`).
