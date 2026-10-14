@@ -1,4 +1,6 @@
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -21,6 +23,27 @@ dependencies {
         testFramework(TestFrameworkType.Platform)
 
         bundledPlugin("Git4Idea")
+    }
+}
+
+intellijPlatform {
+    pluginVerification {
+        ides {
+            // Always verify against IDEA (the platform dependency target)
+            current()
+            // Verify against additional IDE products in CI (-PfullVerification=true)
+            if (providers.gradleProperty("fullVerification").orNull.toBoolean()) {
+                select {
+                    types = listOf(
+                        IntelliJPlatformType.PyCharm,
+                        IntelliJPlatformType.WebStorm,
+                        IntelliJPlatformType.RustRover,
+                    )
+                    channels = listOf(ProductRelease.Channel.RELEASE)
+                    sinceBuild = "253"
+                }
+            }
+        }
     }
 }
 
