@@ -7,7 +7,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.ValidationInfo
-import com.intellij.ui.ComboboxSpeedSearch
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.listCellRenderer.listCellRenderer
@@ -42,9 +41,7 @@ class AddEditRuleDialog(
                 text(FileTypeDisplayHelper.displayText(fileType))
             }
         }
-        ComboboxSpeedSearch.installSpeedSearch(this) { fileType ->
-            fileType?.let { FileTypeDisplayHelper.displayText(it) } ?: ""
-        }
+        isSwingPopup = false
         val targetName = existingRule?.fileTypeName
         if (targetName != null) {
             val matched = availableFileTypes.find { it.name.equals(targetName, ignoreCase = true) }

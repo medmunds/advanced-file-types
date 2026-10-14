@@ -4,7 +4,6 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.speedSearch.SpeedSearchSupply
 import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
@@ -226,7 +225,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals("docs/*.txt", extracted.pattern)
         Assert.assertEquals("HTML", extracted.fileTypeName)
         Assert.assertEquals(PatternSyntax.GLOB, extracted.syntax)
-        Assert.assertNotNull("fileTypeCombo should have SpeedSearch installed", SpeedSearchSupply.getSupply(dialog.fileTypeCombo, true))
+        Assert.assertFalse("fileTypeCombo should use JBPopup for filtering mode", dialog.fileTypeCombo.isSwingPopup)
         dialog.disposeIfNeeded()
     }
 
