@@ -13,30 +13,34 @@
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
     <description><![CDATA[
-        Per-project file types using glob or regex.
+        Adds project-level file type overrides, using glob or regex with full path matching.
+        Can also load file types from VS Code settings and Git <code>linguist-language</code> attributes.
 
+        <h2>Features</h2>
         <ul>
             <li><strong>Project-specific file types:</strong>
-                Override the global <em>File Types</em> settings at the project level.</li>
+                Override the global <em>File Types</em> settings in each project.</li>
             <li><strong>Flexible pattern matching:</strong>
                 Use globs (including <code>**</code>) and regular expressions.
                 Match filenames or full directory paths in priority order.</li>
             <li><strong>VS Code and .gitattributes support:</strong>
-                Optionally load file type associations from .vscode/settings.json
-                or Git linguist-language attributes.</li>
+                Optionally load file type associations from <code>.vscode/settings.json</code>
+                and GitHub's <code>linguist-language</code> Git attributes.</li>
             <li><strong>Integrated pattern tester:</strong>
                 Easily verify rules and imported associations.</li>
             <li><strong>Free and open source:</strong>
-                <a href="https://github.com/medmunds/advanced-file-types">Code and docs</a> –
+                <a href="https://github.com/medmunds/advanced-file-types/blob/main/README.md">Docs</a> –
+                <a href="https://github.com/medmunds/advanced-file-types">Code</a> –
                 <a href="https://github.com/medmunds/advanced-file-types/issues">Issues</a></li>
         </ul>
 
-        <p>The <strong>Advanced File Types</strong> plugin lets you…</p>
+        <h2>Examples</h2>
+        <p>With the <strong>Advanced File Types</strong> plugin, you could…</p>
         <ul>
             <li>Change <code>*.html</code> to Handlebars in one project and EJS in another.</li>
-            <li>Treat <code>docs/**/*.txt</code> as Markdown but other <code>.txt</code> files as plain text.</li>
-            <li>Enable JSON5 syntax for everything under <code>config/</code>.</li>
-            <li>Stop reassigning <code>.tpl</code> or <code>.conf</code> every time you switch projects.</li>
+            <li>Treat <code>docs/**/*.txt</code> as Markdown but other <code>*.txt</code> files as plain text.</li>
+            <li>Enable JSON5 syntax for all of <code>config/*.json</code>.</li>
+            <li>Stop reassigning <code>*.tpl</code> or <code>*.conf</code> every time you switch projects.</li>
         </ul>
         ]]></description>
 

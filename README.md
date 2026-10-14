@@ -1,23 +1,36 @@
 # Advanced File Types plugin for JetBrains IDEs
 
-The **Advanced File Types** plugin extends the standard file type associations in JetBrains IDEs. With it installed, you can…
+The **Advanced File Types** plugin adds project-level file type overrides in JetBrains IDEs. It supports globs or regex with full path matching . It can also load file types from VS Code settings and Git `linguist-language` attributes.
+
+Using the plugin, you could…
 
 * Change `*.html` to Handlebars in one project and EJS in another.
-* Treat `docs/**/*.txt` as Markdown but other `.txt` files as plain text.
-* Enable JSON5 syntax for everything under `config/`.
-* Stop reassigning `.tpl` or `.conf` every time you switch projects.
-* Load file type associations from VS Code settings or GitHub Linguist attributes stored with the project.
+* Treat `docs/**/*.txt` as Markdown but other `*.txt` files as plain text.
+* Enable JSON5 syntax for all of `config/*.json`.
+* Stop reassigning `*.tpl` or `*.conf` every time you switch projects.
+
+## Contents
+
+* [Features](#features)
+* [Usage](#usage)
+  * [Glob patterns](#glob-patterns)
+  * [Regular expression patterns](#regular-expression-patterns)
+  * [VS Code setttings and .gitattributes linguist-language support](#vs-code-settings-and-gitattributes-linguist-language-support) 
+* [Why this plugin?](#why-this-plugin)
+* [Screenshots](#screenshots)
+* [Development](#development)
+* [License](#license)
 
 ## Features
 <!--suppress CheckImageSize -->
 
-* **Project-specific file types:** Override the global file types settings at the project level.
+* **Project-specific file types:** Override the global *File Types* settings in each project.
 
-* **Flexible pattern matching:** Use [globs](#glob-patterns) (including `**`) and [regular expressions](#regular-expression-patterns) (including negative lookahead). Match filenames or full directory paths in priority order.
+* **Flexible pattern matching:** Use [globs](#glob-patterns) (including `**`) and [regular expressions](#regular-expression-patterns). Match filenames or full directory paths in priority order.
 
   <img alt="Pattern matching rules configuration" src="img/rules.png" width="632">
 
-* **VS Code and .gitattributes support:** Optionally load file type associations from `.vscode/settings.json` or Git `linguist-language` attributes.
+* **VS Code and .gitattributes support:** Optionally load file type associations from `.vscode/settings.json` and GitHub's `linguist-language` Git attributes.
 
   <img alt="VS Code and gitattributes checkboxes" src="img/vscode-and-gitattributes.png" width="347"/>
 
@@ -30,15 +43,13 @@ The **Advanced File Types** plugin extends the standard file type associations i
 
 ## Installation
 
-The **Advanced File Types** plugin should work with any[^1] JetBrains IDE version 2025.3 and later.
+The **Advanced File Types** plugin should work with any JetBrains IDE version 2025.3 and later.
 
 1. Open **Settings | Plugins**
 2. Search for **Advanced File Types** in the marketplace
 3. Click **Install**
 
 Alternatively, download the latest release from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35076-advanced-file-types).
-
-[^1]: DataGrip users may also need to install Git support (Plugin ID `Git4Idea`), which comes bundled with all other JetBrains IDEs.
 
 ## Usage
 
@@ -75,6 +86,8 @@ Glob patterns follow [VS Code's glob syntax][vscode-glob-patterns] and support `
 Regex patterns are always evaluated against the *entire project-relative path,* with no leading `/` and with directory separators normalized to `/` on all platforms. A full string match is required (implicit `^...$` anchors).
 
 Note that regex `.*` matches *any* characters, including `/` directory separators. Use `[^/]*` to match a single pathname component.
+
+Negative lookahead is supported. For example, `(?<!public/).*\.html` will match all `.html` files except those under `public/`.
 
 Regex syntax follows Java's [`java.util.regex.Pattern`][java-regex] with case-insensitive matching. See [JetBrains IntelliJ IDEA Regular Expressions Guide][jetbrains-regex] for details.
 
