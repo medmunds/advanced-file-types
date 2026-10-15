@@ -17,17 +17,21 @@ class AdvancedFileTypeOverrider : FileTypeOverrider {
         if (isResolving.get()) {
             return null
         }
-        val project = ProjectLocator.getInstance().guessProjectForFile(file)
-        if (project == null || project.isDisposed || !project.isInitialized || project.isDefault) {
-            return null
-        }
+        return try {
+            val project = ProjectLocator.getInstance().guessProjectForFile(file)
+            if (project == null || project.isDisposed || !project.isInitialized || project.isDefault) {
+                return null
+            }
 
-        isResolving.set(true)
-        try {
-            val settings = AdvancedFileTypeSettings.getInstance(project)
-            return settings.findMatchingFileType(file)
-        } finally {
-            isResolving.set(false)
+            isResolving.set(true)
+            try {
+                val settings = AdvancedFileTypeSettings.getInstance(project)
+                settings.findMatchingFileType(file)
+            } finally {
+                isResolving.set(false)
+            }
+        } catch (_: Throwable) {
+            null
         }
     }
 }

@@ -170,6 +170,23 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals("index.html should match negative lookahead rule", xmlFileType, overrider.getOverriddenFileType(rootFile))
     }
 
+    fun testOverriderGracefullyHandlesInvalidFileOrExceptions() {
+        // Invalid or directory files must return null
+        val dir = myFixture.addFileToProject("dir/dummy.txt", "dummy").virtualFile.parent
+        Assert.assertNull(overrider.getOverriddenFileType(dir))
+
+        // When a mock or virtual file throws during project location or resolution,
+        // overrider must safely catch the exception and return null (preventing UI paint crashes)
+        val mockFile = object : com.intellij.testFramework.LightVirtualFile("paintCrashTest.txt") {
+            override fun isValid(): Boolean = true
+            override fun isDirectory(): Boolean = false
+            override fun getFileSystem(): com.intellij.openapi.vfs.VirtualFileSystem {
+                throw IllegalStateException("Lock access disallowed during paint")
+            }
+        }
+        Assert.assertNull(overrider.getOverriddenFileType(mockFile))
+    }
+
     fun testSettingsStatePersistence() {
         val state = AdvancedFileTypeSettings.State()
         state.rules.add(FileTypeOverrideRule("templates/**/*.tpl", "HTML", PatternSyntax.GLOB))
@@ -527,7 +544,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         configurable.updateTestResult()
         Assert.assertEquals(FileTypeDisplayHelper.displayText(defaultUnknownType), typeLabel.text)
         Assert.assertEquals(FileTypeDisplayHelper.iconFor(defaultUnknownType), typeLabel.icon)
-        Assert.assertTrue("Detail label should indicate no override or global match", (detailLabel?.text ?: "").contains("No override or global type matched", true))
+        Assert.assertTrue("Detail label should indicate no override or global match", (detailLabel?.text ?: "").contains("No match in overrides or global", true))
 
         // Test unmatched state for standard known file type (e.g., HTML)
         val defaultHtmlType = FileTypeManager.getInstance().getFileTypeByFileName("index.html")
@@ -948,7 +965,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertTrue(
             "Test result should show no match when gitattributes is disabled",
             typeText2.contains("default", true) ||
-            detailText2.contains("No override", true)
+            detailText2.contains("No match", true)
         )
 
         // Re-enable and verify match again
