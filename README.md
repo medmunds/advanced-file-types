@@ -37,7 +37,7 @@ Using the plugin, you could…
 * **Integrated pattern tester:**
     Easily verify rules and imported associations.
 
-  <img alt="'Test Pattern Match' in the settings" src="img/test-matching.png" width="456">
+  <img alt="'Test Pattern Matching' in the settings" src="img/test-matching.png" width="456">
 
 * **Free and open source**
 

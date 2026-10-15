@@ -11,6 +11,7 @@ import com.medmunds.advancedfiletypes.model.PatternSyntax
 import com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings
 import com.medmunds.advancedfiletypes.settings.MatchResult
 import com.medmunds.advancedfiletypes.ui.AdvancedFileTypeConfigurable
+import com.medmunds.advancedfiletypes.ui.FileTypeDisplayHelper
 import com.medmunds.advancedfiletypes.vscode.VsCodeAssociation
 import com.medmunds.advancedfiletypes.vscode.VsCodeLanguageResolver
 import com.medmunds.advancedfiletypes.vscode.VsCodeSettingsReader
@@ -520,12 +521,21 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals(htmlType?.icon, typeLabel.icon)
         Assert.assertTrue("Detail label should contain pattern", (detailLabel?.text ?: "").contains("docs/*.txt"))
 
-        // Test unmatched state: type label shows IDE default, detail label shows no override
+        // Test unmatched state: type label shows IDE default, detail label shows no override or global type matched
+        val defaultUnknownType = FileTypeManager.getInstance().getFileTypeByFileName("file.abc")
         configurable.testPathField.text = "unknown/file.abc"
         configurable.updateTestResult()
-        Assert.assertTrue("Type label should indicate IDE default", typeLabel.text.contains("default", true))
-        Assert.assertNull(typeLabel.icon)
-        Assert.assertTrue("Detail label should indicate no override", (detailLabel?.text ?: "").contains("No override", true))
+        Assert.assertEquals(FileTypeDisplayHelper.displayText(defaultUnknownType), typeLabel.text)
+        Assert.assertEquals(FileTypeDisplayHelper.iconFor(defaultUnknownType), typeLabel.icon)
+        Assert.assertTrue("Detail label should indicate no override or global match", (detailLabel?.text ?: "").contains("No override or global type matched", true))
+
+        // Test unmatched state for standard known file type (e.g., HTML)
+        val defaultHtmlType = FileTypeManager.getInstance().getFileTypeByFileName("index.html")
+        configurable.testPathField.text = "site/index.html"
+        configurable.updateTestResult()
+        Assert.assertEquals(FileTypeDisplayHelper.displayText(defaultHtmlType), typeLabel.text)
+        Assert.assertEquals(FileTypeDisplayHelper.iconFor(defaultHtmlType), typeLabel.icon)
+        Assert.assertTrue("Detail label should indicate matched global file types", (detailLabel?.text ?: "").contains("Matched global file types", true))
 
         // Test empty path clears both labels (uses NBSP to prevent layout shifts)
         configurable.testPathField.text = ""

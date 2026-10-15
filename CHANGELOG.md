@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Changed
+* Test Pattern Matching now displays the global file type when no override rule applies.
+
 ## [0.1.0] - Released 2026-10-13
 
 ### Added

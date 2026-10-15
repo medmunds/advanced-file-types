@@ -1,5 +1,7 @@
 package com.medmunds.advancedfiletypes.ui
 
+import com.intellij.openapi.fileTypes.FileTypeManager
+import com.intellij.openapi.fileTypes.UnknownFileType
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.project.Project
 import com.intellij.ui.DoubleClickListener
@@ -284,9 +286,16 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 )
             }
             is MatchResult.NoMatch -> {
+                val defaultFileType = FileTypeManager.getInstance().getFileTypeByFileName(fileName)
+                val detailText = if (defaultFileType is UnknownFileType || defaultFileType == UnknownFileType.INSTANCE) {
+                    AdvancedFileTypesBundle.message("settings.test.matched.none")
+                } else {
+                    AdvancedFileTypesBundle.message("settings.test.matched.global")
+                }
                 setResult(
-                    typeText = AdvancedFileTypesBundle.message("settings.test.no.match.type"),
-                    detailText = AdvancedFileTypesBundle.message("settings.test.no.override")
+                    typeText = FileTypeDisplayHelper.displayText(defaultFileType),
+                    typeIcon = FileTypeDisplayHelper.iconFor(defaultFileType),
+                    detailText = detailText
                 )
             }
         }
