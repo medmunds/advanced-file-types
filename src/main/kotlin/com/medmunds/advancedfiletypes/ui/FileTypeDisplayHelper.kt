@@ -1,5 +1,6 @@
 package com.medmunds.advancedfiletypes.ui
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.UnknownFileType
@@ -67,6 +68,12 @@ object FileTypeDisplayHelper {
     fun iconForUnknown(): Icon? = UnknownFileType.INSTANCE.icon
 
     /**
+     * Returns the icon for a JetBrains file type that is not available in this IDE.
+     */
+//    fun iconForUnsupported(): Icon = AllIcons.Nodes.PpInvalid
+    fun iconForUnsupported(): Icon = AllIcons.General.Warning
+
+    /**
      * Resolves a file type name to a [FileType] and returns the display text.
      * If the type is not found, returns the unknown display text with the given origin.
      */
@@ -83,10 +90,10 @@ object FileTypeDisplayHelper {
 
     /**
      * Resolves a file type name to a [FileType] and returns the icon.
-     * If the type is not found, returns the unknown icon.
+     * If the type is not found, returns the unsupported file type icon.
      */
-    fun iconForName(typeName: String): Icon? {
+    fun iconForName(typeName: String): Icon {
         val fileType = FileTypeManager.getInstance().findFileTypeByName(typeName)
-        return fileType?.icon ?: iconForUnknown()
+        return fileType?.icon ?: iconForUnsupported()
     }
 }

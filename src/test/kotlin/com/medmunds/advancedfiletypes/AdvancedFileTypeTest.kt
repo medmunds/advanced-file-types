@@ -1,7 +1,9 @@
 package com.medmunds.advancedfiletypes
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileTypes.FileTypeManager
+import com.intellij.openapi.fileTypes.UnknownFileType
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
@@ -49,6 +51,16 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         } finally {
             super.tearDown()
         }
+    }
+
+    fun testUnsupportedFileTypeIcon() {
+        Assert.assertEquals(AllIcons.General.Warning, FileTypeDisplayHelper.iconForUnsupported())
+        Assert.assertEquals(AllIcons.General.Warning, FileTypeDisplayHelper.iconForName("UnavailableFileType"))
+    }
+
+    fun testUnmappedExternalLanguageUsesUnknownFileTypeIcon() {
+        @Suppress("KotlinMisorderedAssertEqualsArguments")
+        Assert.assertEquals(UnknownFileType.INSTANCE.icon, FileTypeDisplayHelper.iconForUnknown())
     }
 
     private fun addGitAttributes(content: String, relativePath: String = ".gitattributes"): com.intellij.psi.PsiFile {
