@@ -39,7 +39,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
     private val rules = mutableListOf<FileTypeOverrideRule>()
     private val tableModel = RuleTableModel(rules)
-    private val table = JBTable(tableModel)
+    internal val table = JBTable(tableModel)
     internal val includeVsCodeCheckBox = JBCheckBox(AdvancedFileTypesBundle.message("settings.includeVsCode"))
     internal val includeGitAttributesCheckBox = JBCheckBox(AdvancedFileTypesBundle.message("settings.includeGitAttributes"))
 
@@ -210,6 +210,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     }
 
     internal fun updateTestResult() {
+        table.clearSelection()
         val path = testPathField.text.trim()
         if (path.isEmpty()) {
             setResult("")
@@ -228,6 +229,14 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
         when (matchResult) {
             is MatchResult.PluginRuleMatch -> {
+                val modelRow = rules.indexOf(matchResult.rule)
+                if (modelRow >= 0) {
+                    val viewRow = table.convertRowIndexToView(modelRow)
+                    if (viewRow >= 0) {
+                        table.setRowSelectionInterval(viewRow, viewRow)
+                        table.scrollRectToVisible(table.getCellRect(viewRow, 0, true))
+                    }
+                }
                 setResult(
                     typeText = FileTypeDisplayHelper.displayText(matchResult.fileType),
                     typeIcon = FileTypeDisplayHelper.iconFor(matchResult.fileType),

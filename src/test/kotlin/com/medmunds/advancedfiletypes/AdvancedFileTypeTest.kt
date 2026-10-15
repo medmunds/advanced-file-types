@@ -577,6 +577,26 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         configurable.disposeUIResources()
     }
 
+    fun testTestPatternMatchingHighlightsMatchedRule() {
+        settings.setRules(listOf(
+            FileTypeOverrideRule("src/*.txt", "HTML", PatternSyntax.GLOB),
+            FileTypeOverrideRule("docs/*.txt", "XML", PatternSyntax.GLOB)
+        ))
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        configurable.testPathField.text = "docs/test.txt"
+        configurable.updateTestResult()
+
+        Assert.assertEquals("The matching custom rule should be highlighted", 1, configurable.table.selectedRow)
+
+        configurable.testPathField.text = "other/file.abc"
+        configurable.updateTestResult()
+        Assert.assertEquals("The previous highlight should clear when no custom rule matches", -1, configurable.table.selectedRow)
+
+        configurable.disposeUIResources()
+    }
+
     fun testTestPatternMatchingHtmlEscaping() {
         // Regression test: patterns containing HTML-sensitive characters must be escaped
         // to prevent HTML injection in the detail label (DSL comment renders HTML)

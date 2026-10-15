@@ -6,6 +6,7 @@
 
 ### Changed
 * Test Pattern Matching now displays the global file type when no override rule applies.
+* Test Pattern Matching now highlights the matching pattern in the rules list.
 
 ### Fixed
 * Prevented `LockAccessDisallowed` exceptions during editor painting when resolving project-specific file types.
