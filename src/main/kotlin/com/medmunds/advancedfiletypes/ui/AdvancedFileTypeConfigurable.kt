@@ -209,6 +209,17 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         testResultCell.comment?.text = if (detailText.isBlank()) NBSP else detailText
     }
 
+    private fun selectRule(rule: FileTypeOverrideRule) {
+        val modelRow = rules.indexOf(rule)
+        if (modelRow >= 0) {
+            val viewRow = table.convertRowIndexToView(modelRow)
+            if (viewRow >= 0) {
+                table.setRowSelectionInterval(viewRow, viewRow)
+                table.scrollRectToVisible(table.getCellRect(viewRow, 0, true))
+            }
+        }
+    }
+
     internal fun updateTestResult() {
         table.clearSelection()
         val path = testPathField.text.trim()
@@ -229,17 +240,24 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
         when (matchResult) {
             is MatchResult.PluginRuleMatch -> {
-                val modelRow = rules.indexOf(matchResult.rule)
-                if (modelRow >= 0) {
-                    val viewRow = table.convertRowIndexToView(modelRow)
-                    if (viewRow >= 0) {
-                        table.setRowSelectionInterval(viewRow, viewRow)
-                        table.scrollRectToVisible(table.getCellRect(viewRow, 0, true))
-                    }
-                }
+                selectRule(matchResult.rule)
                 setResult(
                     typeText = FileTypeDisplayHelper.displayText(matchResult.fileType),
                     typeIcon = FileTypeDisplayHelper.iconFor(matchResult.fileType),
+                    detailText = AdvancedFileTypesBundle.message(
+                        "settings.test.matched.pattern",
+                        escapeHtml(matchResult.rule.pattern)
+                    )
+                )
+            }
+            is MatchResult.PluginRuleUnsupportedMatch -> {
+                selectRule(matchResult.rule)
+                setResult(
+                    typeText = FileTypeDisplayHelper.displayTextForUnknown(
+                        matchResult.fileTypeName,
+                        UnknownFileTypeOrigin.NO_IDE_SUPPORT
+                    ),
+                    typeIcon = FileTypeDisplayHelper.iconForUnsupported(),
                     detailText = AdvancedFileTypesBundle.message(
                         "settings.test.matched.pattern",
                         escapeHtml(matchResult.rule.pattern)
@@ -258,12 +276,21 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 )
             }
             is MatchResult.VsCodeUnsupportedMatch -> {
+                val fileTypeName = matchResult.fileTypeName
                 setResult(
-                    typeText = FileTypeDisplayHelper.displayTextForUnknown(
-                        matchResult.languageId,
-                        UnknownFileTypeOrigin.VS_CODE_IDENTIFIER
-                    ),
-                    typeIcon = FileTypeDisplayHelper.iconForUnknown(),
+                    typeText = if (fileTypeName != null) {
+                        FileTypeDisplayHelper.displayTextForUnknown(fileTypeName, UnknownFileTypeOrigin.NO_IDE_SUPPORT)
+                    } else {
+                        FileTypeDisplayHelper.displayTextForUnknown(
+                            matchResult.languageId,
+                            UnknownFileTypeOrigin.VS_CODE_IDENTIFIER
+                        )
+                    },
+                    typeIcon = if (fileTypeName != null) {
+                        FileTypeDisplayHelper.iconForUnsupported()
+                    } else {
+                        FileTypeDisplayHelper.iconForUnknown()
+                    },
                     detailText = AdvancedFileTypesBundle.message(
                         "settings.test.matched.vscode.pattern",
                         escapeHtml(matchResult.pattern),

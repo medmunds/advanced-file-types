@@ -425,45 +425,71 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
             """
             {
               "files.associations": {
-                "docs/unsupported.txt": "unsupported_language_identifier_123",
+                "docs/unsupported.txt": "unavailable_language",
                 "docs/*.txt": "html"
               }
             }
             """.trimIndent()
         )
         VsCodeSettingsReader.clearCache()
+        settings.state.customVsCodeLanguageMappings["unavailable_language"] = "UnavailableMappedFileType123"
 
         val unsupportedFile = myFixture.addFileToProject("docs/unsupported.txt", "content").virtualFile
         val otherFile = myFixture.addFileToProject("docs/other.txt", "content").virtualFile
 
-        // Unsupported rule should fall through to subsequent rule
+        // The first matching association wins even when its language ID is unsupported.
+        Assert.assertNull(overrider.getOverriddenFileType(unsupportedFile))
+        val unsupportedMatch = settings.evaluateMatch("docs/unsupported.txt", "unsupported.txt")
+        Assert.assertTrue(unsupportedMatch is MatchResult.VsCodeUnsupportedMatch)
+        Assert.assertEquals("UnavailableMappedFileType123", (unsupportedMatch as MatchResult.VsCodeUnsupportedMatch).fileTypeName)
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        configurable.testPathField.text = "docs/unsupported.txt"
+        configurable.updateTestResult()
+        Assert.assertTrue(configurable.testResultCell.component.text.contains("UnavailableMappedFileType123"))
+        Assert.assertEquals(FileTypeDisplayHelper.iconForUnsupported(), configurable.testResultCell.component.icon)
+        configurable.disposeUIResources()
+
         val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
-        Assert.assertEquals(htmlType, overrider.getOverriddenFileType(unsupportedFile))
         Assert.assertEquals(htmlType, overrider.getOverriddenFileType(otherFile))
     }
 
     fun testPluginRuleUnsupportedFileTypeGracefulFallback() {
         val file = myFixture.addFileToProject("docs/config.txt", "content").virtualFile
 
-        // Rule with non-existent file type should be silently skipped
+        // A rule with a non-existent type should produce an unsupported match.
         settings.setRules(listOf(
             FileTypeOverrideRule("docs/*.txt", "NonExistentFileType123", PatternSyntax.GLOB)
         ))
-        Assert.assertNull("Unsupported file type rule should be silently skipped", overrider.getOverriddenFileType(file))
+        Assert.assertNull("Unsupported file type rule should not override the IDE type", overrider.getOverriddenFileType(file))
 
-        // When a valid rule follows an unsupported one, the valid rule should still match
-        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        // A later matching rule must not override the first matching rule.
         settings.setRules(listOf(
             FileTypeOverrideRule("docs/*.txt", "NonExistentFileType123", PatternSyntax.GLOB),
             FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB)
         ))
-        Assert.assertEquals("Second valid rule should match after unsupported rule is skipped", htmlType, overrider.getOverriddenFileType(file))
+        Assert.assertNull("An unsupported first match should block later rules", overrider.getOverriddenFileType(file))
+        val unsupportedRuleMatch = settings.evaluateMatch(
+            "docs/config.txt",
+            "config.txt",
+            includeVsCode = false,
+            includeGitAttributes = false
+        )
+        Assert.assertTrue(unsupportedRuleMatch is MatchResult.PluginRuleUnsupportedMatch)
 
-        // evaluateMatch should return NoMatch when all matching rules have unsupported types
-        val noMatchResult = settings.evaluateMatch("docs/config.txt", "config.txt", listOf(
-            FileTypeOverrideRule("docs/*.txt", "NonExistentFileType123", PatternSyntax.GLOB)
-        ), includeVsCode = false, includeGitAttributes = false)
-        Assert.assertTrue("Should return NoMatch when all rules reference unsupported types", noMatchResult is MatchResult.NoMatch)
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        configurable.testPathField.text = "docs/config.txt"
+        configurable.updateTestResult()
+        Assert.assertEquals("Tester should highlight the first matching rule", 0, configurable.table.selectedRow)
+        Assert.assertTrue("Tester should display the unavailable type", configurable.testResultCell.component.text.contains("NonExistentFileType123"))
+        Assert.assertEquals(FileTypeDisplayHelper.iconForUnsupported(), configurable.testResultCell.component.icon)
+        configurable.disposeUIResources()
+
+        settings.setRules(listOf(FileTypeOverrideRule("docs/*.txt", "NonExistentFileType123", PatternSyntax.GLOB)))
+        val noMatchResult = settings.evaluateMatch("other/config.txt", "config.txt", includeVsCode = false, includeGitAttributes = false)
+        Assert.assertTrue("A path that matches no rules should return NoMatch", noMatchResult is MatchResult.NoMatch)
     }
 
     fun testConfigurableWithVsCodeCheckboxAndDiagnostics() {
@@ -500,6 +526,11 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         // Match result evaluation for unsupported VS Code setting
         val unsupportedMatch = settings.evaluateMatch("special/file.xyz", "file.xyz", emptyList(), includeVsCode = true)
         Assert.assertTrue(unsupportedMatch is MatchResult.VsCodeUnsupportedMatch)
+        Assert.assertNull((unsupportedMatch as MatchResult.VsCodeUnsupportedMatch).fileTypeName)
+
+        configurable.testPathField.text = "special/file.xyz"
+        configurable.updateTestResult()
+        Assert.assertEquals(FileTypeDisplayHelper.iconForUnknown(), configurable.testResultCell.component.icon)
 
         // Match result evaluation when VS Code is disabled
         val noMatchWhenDisabled = settings.evaluateMatch("docs/test.txt", "test.txt", emptyList(), includeVsCode = false)
@@ -865,7 +896,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertNull("Deleted .gitattributes removes override", overrider.getOverriddenFileType(payloadFile))
     }
 
-    fun testVsCodeUnsupportedFallsThroughToGitAttributes() {
+    fun testVsCodeUnsupportedMatchBlocksGitAttributes() {
         val jsonType = FileTypeManager.getInstance().findFileTypeByName("JSON")
         Assert.assertNotNull(jsonType)
 
@@ -887,15 +918,11 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
 
         val dataFile = myFixture.addFileToProject("sample.data", "{}").virtualFile
 
-        // Both findMatchingFileType and evaluateMatch should fall through to GitAttributes
-        Assert.assertEquals("Overrider should fall through from unsupported VS Code to GitAttributes", jsonType, overrider.getOverriddenFileType(dataFile))
+        // The first matching VS Code association blocks lower-priority sources.
+        Assert.assertNull("Overrider should stop at the unsupported VS Code association", overrider.getOverriddenFileType(dataFile))
 
         val match = settings.evaluateMatch("sample.data", "sample.data", includeVsCode = true, includeGitAttributes = true)
-        Assert.assertTrue("evaluateMatch should fall through and return GitAttributesMatch", match is MatchResult.GitAttributesMatch)
-        val gitMatch = match as MatchResult.GitAttributesMatch
-        Assert.assertEquals("sample.data", gitMatch.pattern)
-        Assert.assertEquals("JSON", gitMatch.language)
-        Assert.assertEquals(jsonType, gitMatch.fileType)
+        Assert.assertTrue("evaluateMatch should retain the unsupported VS Code match", match is MatchResult.VsCodeUnsupportedMatch)
     }
 
     fun testGitAttributesOnlyAppliesWithinProject() {

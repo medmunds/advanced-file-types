@@ -27,8 +27,13 @@ import com.medmunds.advancedfiletypes.vscode.VsCodeSettingsReader
 
 sealed class MatchResult {
     data class PluginRuleMatch(val rule: FileTypeOverrideRule, val fileType: FileType) : MatchResult()
+    data class PluginRuleUnsupportedMatch(val rule: FileTypeOverrideRule, val fileTypeName: String) : MatchResult()
     data class VsCodeMatch(val pattern: String, val languageId: String, val fileType: FileType) : MatchResult()
-    data class VsCodeUnsupportedMatch(val pattern: String, val languageId: String) : MatchResult()
+    data class VsCodeUnsupportedMatch(
+        val pattern: String,
+        val languageId: String,
+        val fileTypeName: String? = null
+    ) : MatchResult()
     data class GitAttributesMatch(val pattern: String, val language: String, val fileType: FileType) : MatchResult()
     data class GitAttributesUnsupportedMatch(val pattern: String, val language: String) : MatchResult()
     object NoMatch : MatchResult()
@@ -149,13 +154,13 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
         for (rule in effectiveRules) {
             if (rule.matches(relativePath, fileName)) {
                 val fileType = fileTypeManager.findFileTypeByName(rule.fileTypeName)
-                if (fileType != null) {
-                    return MatchResult.PluginRuleMatch(rule, fileType)
+                return if (fileType != null) {
+                    MatchResult.PluginRuleMatch(rule, fileType)
+                } else {
+                    MatchResult.PluginRuleUnsupportedMatch(rule, rule.fileTypeName)
                 }
             }
         }
-
-        var firstUnsupportedMatch: MatchResult? = null
 
         // 2. Check VS Code settings.json (files.associations) if enabled
         if (includeVsCode) {
@@ -167,14 +172,20 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
                     null
                 }
                 if (pattern != null && PathPatternMatcher.matches(pattern, relativePath, fileName)) {
-                    val fileType = VsCodeLanguageResolver.resolveFileType(
+                    return when (val resolution = VsCodeLanguageResolver.resolve(
                         association.languageId,
                         myState.customVsCodeLanguageMappings
-                    )
-                    if (fileType != null) {
-                        return MatchResult.VsCodeMatch(association.pattern, association.languageId, fileType)
-                    } else if (firstUnsupportedMatch == null) {
-                        firstUnsupportedMatch = MatchResult.VsCodeUnsupportedMatch(association.pattern, association.languageId)
+                    )) {
+                        is VsCodeLanguageResolver.Resolution.Resolved ->
+                            MatchResult.VsCodeMatch(association.pattern, association.languageId, resolution.fileType)
+                        is VsCodeLanguageResolver.Resolution.Unsupported ->
+                            MatchResult.VsCodeUnsupportedMatch(
+                                association.pattern,
+                                association.languageId,
+                                resolution.fileTypeName
+                            )
+                        VsCodeLanguageResolver.Resolution.Unmapped ->
+                            MatchResult.VsCodeUnsupportedMatch(association.pattern, association.languageId)
                     }
                 }
             }
@@ -188,13 +199,12 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
                 val fileType = LinguistLanguageResolver.resolveFileType(language)
                 if (fileType != null) {
                     return MatchResult.GitAttributesMatch(gitAttributesRelativePath, language, fileType)
-                } else if (firstUnsupportedMatch == null) {
-                    firstUnsupportedMatch = MatchResult.GitAttributesUnsupportedMatch(gitAttributesRelativePath, language)
                 }
+                return MatchResult.GitAttributesUnsupportedMatch(gitAttributesRelativePath, language)
             }
         }
 
-        return firstUnsupportedMatch ?: MatchResult.NoMatch
+        return MatchResult.NoMatch
     }
 
     /**
@@ -215,6 +225,7 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
             is MatchResult.PluginRuleMatch -> match.fileType
             is MatchResult.VsCodeMatch -> match.fileType
             is MatchResult.GitAttributesMatch -> match.fileType
+            is MatchResult.PluginRuleUnsupportedMatch,
             is MatchResult.VsCodeUnsupportedMatch,
             is MatchResult.GitAttributesUnsupportedMatch,
             MatchResult.NoMatch -> null

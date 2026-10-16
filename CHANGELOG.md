@@ -9,6 +9,7 @@
 * Test Pattern Matching now highlights the matching pattern in the rules list.
 
 ### Fixed
+* Stop at the first matching rule when its target file type is unavailable in the current IDE.
 * Prevented `LockAccessDisallowed` exceptions during editor painting when resolving project-specific file types.
 
 ## [0.1.0] - Released 2026-10-13
