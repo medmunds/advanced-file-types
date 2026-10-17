@@ -55,7 +55,7 @@
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
         <fileTypeOverrider implementation="com.medmunds.advancedfiletypes.AdvancedFileTypeOverrider"/>
-        <projectConfigurable parentId="editor"
+        <projectConfigurable parentId="preferences.fileTypes"
                              id="com.medmunds.advancedfiletypes.settings"
                              key="settings.displayName"
                              instance="com.medmunds.advancedfiletypes.ui.AdvancedFileTypeConfigurable"/>

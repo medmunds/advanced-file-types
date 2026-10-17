@@ -62,7 +62,7 @@ Alternatively, download the latest release from the [JetBrains Marketplace](http
 
 ## Usage
 
-Configure file type overrides in **Settings | Editor | Advanced File Types**.
+Configure file type overrides in **Settings | Editor | File Types | Advanced File Types**.
 
 * Use the `+` button to add a new rule, `-` to remove a rule, and arrow buttons to reorder rules. Select an existing rule and click the pencil button to edit it (or double click it in the list).
 * Use the checkboxes to enable or disable VS Code and Git attributes matching. (Both are enabled by default.)

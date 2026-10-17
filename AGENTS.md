@@ -21,7 +21,7 @@ JetBrains IDEs natively support only global, project-agnostic file type associat
 
 ### Evaluation Hierarchy
 When resolving a file's type, rules are evaluated in the following strict order, stopping at the first match:
-1. **Custom Project Rules:** Configured in **Settings | Editor | Advanced File Types**, evaluated top-to-bottom.
+1. **Custom Project Rules:** Configured in **Settings | Editor | File Types | Advanced File Types**, evaluated top-to-bottom.
 2. **VS Code Settings:** `.vscode/settings.json` (`files.associations`), if enabled.
 3. **Git Attributes:** `.gitattributes` (`linguist-language`), if enabled.
 4. **IDE Global Associations:** Default IntelliJ fallback (`Settings | Editor | File Types`).
@@ -62,7 +62,7 @@ When resolving a file's type, rules are evaluated in the following strict order,
   - `LinguistLanguageResolver`: Maps Linguist language identifiers to IntelliJ `FileType` instances via `linguist-language-map.properties`.
   - `GitAttributesFileListener`: `BulkFileListener` detecting changes to any `.gitattributes` or `.git/info/attributes` files to trigger cache clear and file type refresh.
 - **`ui/`**:
-  - `AdvancedFileTypeConfigurable`: Settings page registered under `editor` (`Settings | Editor | Advanced File Types`).
+  - `AdvancedFileTypeConfigurable`: Settings page registered under `preferences.fileTypes` (`Settings | Editor | File Types | Advanced File Types`).
   - `AddEditRuleDialog`: Modal dialog for creating and editing individual pattern rules.
 - **`help/`**:
   - `AdvancedFileTypeWebHelpProvider`: Directs IDE help buttons to online documentation.

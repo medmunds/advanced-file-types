@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### Changed
+* Moved the Advanced File Types settings page under **Settings | Editor | File Types**.
 * Test Pattern Matching now displays the global file type when no override rule applies.
 * Test Pattern Matching now highlights the matching pattern in the rules list.
 
