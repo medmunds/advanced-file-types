@@ -22,7 +22,9 @@ class GitAttributesServiceTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
-            GitAttributesService.getInstance(project).clearCache()
+            val service = GitAttributesService.getInstance(project)
+            service.clearCache()
+            service.customProjectDirectory = null
             tempGitDir.deleteRecursively()
         } finally {
             super.tearDown()
@@ -181,5 +183,44 @@ class GitAttributesServiceTest : BasePlatformTestCase() {
         } finally {
             nonGitDir.deleteRecursively()
         }
+    }
+
+    fun testGitExecutableResolutionOnEdtDoesNotBlockOrThrow() {
+        val service = GitAttributesService.getInstance(project)
+        val exe = service.getEffectiveGitExecutable()
+        Assert.assertTrue("Resolved executable should not be blank", exe.isNotBlank())
+    }
+
+    fun testGitExecutableResolutionOnBackgroundThread() {
+        val service = GitAttributesService.getInstance(project)
+        var backgroundExe: String? = null
+        var backgroundError: Throwable? = null
+
+        val thread = Thread({
+            try {
+                backgroundExe = service.updateGitExecutablePath()
+            } catch (t: Throwable) {
+                backgroundError = t
+            }
+        }, "Test-GitExeUpdate-Thread")
+        thread.start()
+        thread.join()
+
+        Assert.assertNull("Background executable update should not throw", backgroundError)
+        Assert.assertNotNull("Background executable update should resolve an executable", backgroundExe)
+        Assert.assertTrue("Resolved executable should not be blank", backgroundExe!!.isNotBlank())
+    }
+
+    fun testGitExecutableEventListener() {
+        val listener = GitExecutableEventListener()
+
+        var listenerError: Throwable? = null
+        try {
+            listener.executableChanged()
+        } catch (t: Throwable) {
+            listenerError = t
+        }
+
+        Assert.assertNull("GitExecutableEventListener should execute without throwing", listenerError)
     }
 }

@@ -16,6 +16,7 @@
 ### Fixed
 * Stop at the first matching rule when its target file type is unavailable in the current IDE.
 * Prevented `LockAccessDisallowed` exceptions during editor painting when resolving project-specific file types.
+* Prevented potential IDE freezes and UI delays during project startup when resolving `.gitattributes` file associations.
 
 ## [0.1.0] - Released 2026-10-13
 

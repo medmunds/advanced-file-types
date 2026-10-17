@@ -67,6 +67,8 @@
                   topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
         <listener class="com.medmunds.advancedfiletypes.gitattributes.GitAttributesFileListener"
                   topic="com.intellij.openapi.vfs.newvfs.BulkFileListener"/>
+        <listener class="com.medmunds.advancedfiletypes.gitattributes.GitExecutableEventListener"
+                  topic="git4idea.config.GitExecutableListener"/>
     </applicationListeners>
 
     <projectListeners>

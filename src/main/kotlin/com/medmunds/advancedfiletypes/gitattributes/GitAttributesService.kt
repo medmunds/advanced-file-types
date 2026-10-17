@@ -1,13 +1,18 @@
 package com.medmunds.advancedfiletypes.gitattributes
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.medmunds.advancedfiletypes.settings.AdvancedFileTypeSettings
+import git4idea.config.GitExecutableDetector
 import git4idea.config.GitExecutableManager
+import git4idea.config.GitVcsApplicationSettings
+import git4idea.config.GitVcsSettings
 import git4idea.repo.GitRepositoryManager
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
@@ -41,6 +46,9 @@ class GitAttributesService(private val project: Project) : Disposable {
     private var lastKnownGitAvailable: Boolean = false
     private var lastAccessTime = System.currentTimeMillis()
 
+    @Volatile
+    private var cachedGitExecutablePath: String? = null
+
     private val idleCheckFuture: Future<*>? = try {
         AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay({
             checkIdleTimeout()
@@ -51,6 +59,7 @@ class GitAttributesService(private val project: Project) : Disposable {
 
     init {
         lastKnownGitAvailable = isGitAvailable()
+        prefetchGitExecutableAsync()
     }
 
     private class ProcessSession(
@@ -112,6 +121,9 @@ class GitAttributesService(private val project: Project) : Disposable {
         if (availabilityChanged) {
             lastKnownGitAvailable = currentlyAvailable
             clearCache()
+            if (currentlyAvailable) {
+                prefetchGitExecutableAsync()
+            }
             return true
         }
         return false
@@ -186,8 +198,9 @@ class GitAttributesService(private val project: Project) : Disposable {
     internal var customProjectDirectory: File? = null
 
     private fun getProjectDirectory(): File? {
-        if (customProjectDirectory != null) {
-            return customProjectDirectory
+        val custom = customProjectDirectory
+        if (custom != null) {
+            return if (custom.isDirectory) custom else null
         }
         val basePath = project.basePath
         if (!basePath.isNullOrBlank()) {
@@ -208,6 +221,106 @@ class GitAttributesService(private val project: Project) : Disposable {
         }
 
         return null
+    }
+
+    /**
+     * Asynchronously pre-fetches and caches the Git executable path on a background thread.
+     */
+    fun prefetchGitExecutableAsync() {
+        if (project.isDisposed || project.isDefault) return
+        try {
+            AppExecutorUtil.getAppExecutorService().execute {
+                if (project.isDisposed || !project.isInitialized) return@execute
+                updateGitExecutablePath()
+            }
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * Resolves the Git executable path without blocking or performing disk detection on the EDT.
+     */
+    internal fun getEffectiveGitExecutable(): String {
+        cachedGitExecutablePath?.let { return it }
+
+        val isEdt = ApplicationManager.getApplication()?.isDispatchThread == true
+        if (isEdt) {
+            val quickPath = getQuickGitPath()
+            cachedGitExecutablePath = quickPath
+            prefetchGitExecutableAsync()
+            return quickPath
+        } else {
+            return updateGitExecutablePath()
+        }
+    }
+
+    /**
+     * Fast, non-blocking check for saved or detected Git executable path.
+     */
+    internal fun getQuickGitPath(): String {
+        try {
+            val projectSettingsPath = GitVcsSettings.getInstance(project).pathToGit
+            if (isValidGitExecutable(projectSettingsPath)) {
+                return projectSettingsPath!!
+            }
+        } catch (_: Exception) {}
+
+        try {
+            val appSettingsPath = GitVcsApplicationSettings.getInstance().savedPathToGit
+            if (isValidGitExecutable(appSettingsPath)) {
+                return appSettingsPath!!
+            }
+        } catch (_: Exception) {}
+
+        try {
+            val detected = GitExecutableManager.getInstance().getDetectedExecutable(project, false)
+            if (isValidGitExecutable(detected)) {
+                return detected!!
+            }
+        } catch (_: Exception) {}
+
+        return GitExecutableDetector.getDefaultExecutable()
+    }
+
+    private fun isValidGitExecutable(path: String?): Boolean {
+        if (path.isNullOrBlank()) return false
+        val file = File(path)
+        if (file.isAbsolute) {
+            return file.isFile && file.canExecute()
+        }
+        return true
+    }
+
+    /**
+     * Queries GitExecutableManager on a background thread, caching the result and notifying
+     * file type changes if the effective executable changed.
+     */
+    internal fun updateGitExecutablePath(): String {
+        val detected = try {
+            val path = GitExecutableManager.getInstance().getPathToGit(project)
+            if (isValidGitExecutable(path)) path else null
+        } catch (e: Exception) {
+            LOG.debug("Unable to obtain Git path from GitExecutableManager: ${e.message}")
+            null
+        }
+        val effective = detected ?: getQuickGitPath()
+        val previous = cachedGitExecutablePath
+        cachedGitExecutablePath = effective
+        if (previous != null && previous != effective) {
+            clearCache()
+            val settings = AdvancedFileTypeSettings.getInstance(project)
+            if (settings.isLoadFromGitAttributes()) {
+                AdvancedFileTypeSettings.notifyFileTypesChanged(project)
+            }
+        }
+        return effective
+    }
+
+    /**
+     * Handles notifications when Git executable detection completes or settings change.
+     */
+    fun onGitExecutableChanged() {
+        if (project.isDisposed || !project.isInitialized) return
+        prefetchGitExecutableAsync()
     }
 
     private fun getOrStartProcessSession(): ProcessSession? {
@@ -237,14 +350,7 @@ class GitAttributesService(private val project: Project) : Disposable {
             return null
         }
 
-        val gitPath = try {
-            GitExecutableManager.getInstance().getPathToGit(project)
-        } catch (e: Exception) {
-            LOG.warn("Failed to obtain Git executable path from Git4Idea: ${e.message}", e)
-            "git"
-        }
-
-        val effectiveGit = if (gitPath.isBlank()) "git" else gitPath
+        val effectiveGit = getEffectiveGitExecutable()
 
         return try {
             val pb = ProcessBuilder(effectiveGit, "check-attr", "--stdin", "-z", LINGUIST_ATTR)

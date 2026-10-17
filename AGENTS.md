@@ -58,8 +58,9 @@ When resolving a file's type, rules are evaluated in the following strict order,
   - `VsCodeSettingsReader`: Reads `files.associations` from `.vscode/settings.json`.
   - `VsCodeSettingsFileListener`: `BulkFileListener` detecting changes to `.vscode/settings.json` to trigger file type refresh.
 - **`gitattributes/`**:
-  - `GitAttributesService`: Project-level service managing a long-lived `git check-attr --stdin -z linguist-language` process with caching, timeout handling, and failure recovery.
+  - `GitAttributesService`: Project-level service managing a long-lived `git check-attr --stdin -z linguist-language` process with caching, asynchronous Git executable discovery, timeout handling, and failure recovery.
   - `GitAttributesFileListener`: `BulkFileListener` detecting changes to any `.gitattributes` or `.git/info/attributes` files to trigger cache clear and file type refresh.
+  - `GitExecutableEventListener`: `GitExecutableListener` detecting changes or background detection completion of the Git executable to update cached path and refresh file types.
 - **`ui/`**:
   - `AdvancedFileTypeConfigurable`: Settings page registered under `preferences.fileTypes` (`Settings | Editor | File Types | Advanced File Types`).
   - `AddEditRuleDialog`: Modal dialog for creating and editing individual pattern rules.

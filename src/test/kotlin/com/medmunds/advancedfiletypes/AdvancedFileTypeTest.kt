@@ -45,7 +45,9 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             settings.setRules(emptyList())
-            GitAttributesService.getInstance(project).clearCache()
+            val service = GitAttributesService.getInstance(project)
+            service.clearCache()
+            service.customProjectDirectory = null
             tempGitDir.deleteRecursively()
         } finally {
             super.tearDown()
