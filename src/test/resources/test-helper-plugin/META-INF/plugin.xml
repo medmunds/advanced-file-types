@@ -1,0 +1,7 @@
+<idea-plugin>
+    <id>com.medmunds.advancedfiletypes.testhelper</id>
+    <name>Advanced File Types Test Helper</name>
+    <vendor>medmunds</vendor>
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.medmunds.advancedfiletypes</depends>
+</idea-plugin>

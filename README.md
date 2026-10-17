@@ -28,16 +28,25 @@ Using the plugin, you could…
 
 * **Flexible pattern matching:** Use [globs](#glob-patterns) (including `**`) and [regular expressions](#regular-expression-patterns). Match filenames or full directory paths in priority order.
 
-  <img alt="Pattern matching rules configuration" src="img/rules.png" width="632">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="img/pattern-matching-rules_dark.png" width="631">
+    <img alt="Pattern matching rules configuration" src="img/pattern-matching-rules.png" width="631">
+  </picture>
 
 * **VS Code and .gitattributes support:** Optionally load file type associations from `.vscode/settings.json` and GitHub's `linguist-language` Git attributes.
 
-  <img alt="VS Code and gitattributes checkboxes" src="img/vscode-and-gitattributes.png" width="347"/>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="img/vscode-and-gitattributes_dark.png" width="353">
+    <img alt="VS Code and gitattributes checkboxes" src="img/vscode-and-gitattributes.png" width="353">
+  </picture>
 
 * **Integrated pattern tester:**
     Easily verify rules and imported associations.
 
-  <img alt="'Test Pattern Matching' in the settings" src="img/test-matching.png" width="456">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="img/test-pattern-matching_dark.png" width="631">
+    <img alt="'Test Pattern Matching' in the settings" src="img/test-pattern-matching.png" width="631">
+  </picture>
 
 * **Free and open source**
 
@@ -125,9 +134,12 @@ JetBrains [**File Types**][file-types-setting] associations are global to all pr
 
 ## Screenshots
 
-Here's the whole **Advanced File Types** settings panel:
+Here's the whole **Advanced File Types** settings:
 
-<img alt="'Advanced File Types' settings panel" src="img/screenshot.png" width="650">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/settings-dialog_dark.png" width="900">
+  <img alt="'Advanced File Types' settings panel" src="img/settings-dialog.png" width="900">
+</picture>
 
 ## Development
 

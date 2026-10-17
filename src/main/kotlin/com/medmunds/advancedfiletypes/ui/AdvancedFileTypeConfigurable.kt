@@ -30,9 +30,14 @@ import javax.swing.event.DocumentListener
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
 
+internal object AdvancedFileTypeConfigurableTracker {
+    @Volatile
+    var currentInstance: AdvancedFileTypeConfigurable? = null
+}
+
 class AdvancedFileTypeConfigurable(private val project: Project) : SearchableConfigurable {
 
-    private companion object {
+    companion object {
         // NBSP reserves height in the DSL label/comment to prevent layout shifts when clearing text
         private const val NBSP = "\u00A0"
     }
@@ -45,6 +50,9 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
     internal val testPathField = JBTextField(30)
     internal lateinit var testResultCell: Cell<JLabel>
+
+    internal var rootPanel: JComponent? = null
+    internal var tableDecoratorPanel: JComponent? = null
 
     override fun getId(): String = "com.medmunds.advancedfiletypes.settings"
 
@@ -103,6 +111,9 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             updateTestResult()
         }
 
+        AdvancedFileTypeConfigurableTracker.currentInstance = this
+        this.tableDecoratorPanel = tablePanel
+
         val component = panel {
             row {
                 label(AdvancedFileTypesBundle.message("settings.description"))
@@ -132,6 +143,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 }
             }
         }
+        this.rootPanel = component
         reset()
         return component
     }
@@ -375,6 +387,14 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             includeGitAttributesCheckBox.isSelected = false
         }
         updateTestResult()
+    }
+
+    override fun disposeUIResources() {
+        if (AdvancedFileTypeConfigurableTracker.currentInstance == this) {
+            AdvancedFileTypeConfigurableTracker.currentInstance = null
+        }
+        rootPanel = null
+        tableDecoratorPanel = null
     }
 
     private class RuleTableModel(

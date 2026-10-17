@@ -92,6 +92,12 @@ or full verification:
 ./gradlew check
 ```
 
+### Generate Documentation Screenshots
+Regenerates all light and dark documentation screenshots into `img/` using WebStorm via the Starter + Driver integration runner:
+```bash
+./gradlew generateScreenshots
+```
+
 ### Build Plugin Distribution
 Generates the deployable plugin archive at `build/distributions/advanced-file-types-<version>.zip`:
 ```bash

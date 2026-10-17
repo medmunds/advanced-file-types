@@ -21,6 +21,8 @@ dependencies {
     intellijPlatform {
         intellijIdea("2025.3.6.1")
         testFramework(TestFrameworkType.Platform)
+        testFramework(TestFrameworkType.JUnit5)
+        testFramework(TestFrameworkType.Starter)
 
         bundledPlugin("Git4Idea")
     }
@@ -48,7 +50,56 @@ intellijPlatform {
 }
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags("screenshot")
+    }
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
+val testHelperJar = tasks.register<Jar>("testHelperJar") {
+    archiveBaseName.set("advanced-file-types-test-helper")
+    archiveClassifier.set("")
+    archiveVersion.set("")
+    from(sourceSets.test.get().output) {
+        include("com/medmunds/advancedfiletypes/ui/ScreenshotHelper*")
+    }
+    from("src/test/resources/test-helper-plugin") {
+        include("META-INF/plugin.xml")
+    }
+    destinationDirectory.set(layout.buildDirectory.dir("test-helper-plugin/lib"))
+}
+
+val buildTestHelperPlugin = tasks.register<Zip>("buildTestHelperPlugin") {
+    archiveBaseName.set("advanced-file-types-test-helper")
+    archiveClassifier.set("")
+    archiveVersion.set("")
+    from(testHelperJar) {
+        into("advanced-file-types-test-helper/lib")
+    }
+    destinationDirectory.set(layout.buildDirectory.dir("test-helper-plugin"))
+}
+
+val generateScreenshots = intellijPlatformTesting.testIde.register("generateScreenshots") {
+    testFramework(TestFrameworkType.Platform)
+    testFramework(TestFrameworkType.JUnit5)
+    testFramework(TestFrameworkType.Starter)
+    task {
+        group = "documentation"
+        description = "Generates documentation screenshots into img/"
+        useJUnitPlatform {
+            includeTags("screenshot")
+        }
+        testLogging {
+            showStandardStreams = true
+        }
+        dependsOn(tasks.buildPlugin, buildTestHelperPlugin)
+        systemProperty("path.to.build.plugin", tasks.buildPlugin.flatMap { it.archiveFile }.get().asFile.absolutePath)
+        systemProperty("path.to.test.helper.plugin", buildTestHelperPlugin.flatMap { it.archiveFile }.get().asFile.absolutePath)
+        systemProperty("allure.results.directory", layout.buildDirectory.dir("allure-results").get().asFile.absolutePath)
+        outputs.dir("img")
+    }
 }
 
 tasks.processResources {
