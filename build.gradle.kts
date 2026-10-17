@@ -31,17 +31,26 @@ dependencies {
 intellijPlatform {
     pluginVerification {
         ides {
-            // Always verify against IDEA (the platform dependency target)
-            current()
-            // Verify against additional IDE products in CI (-PfullVerification=true)
-            if (providers.gradleProperty("fullVerification").orNull.toBoolean()) {
+            val isMinimal = providers.gradleProperty("minimalVerification")
+                .map { it.isEmpty() || it.toBoolean() }
+                .getOrElse(false)
+
+            if (isMinimal) {
+                // Verify only against the current target IDEA version (local development)
+                current()
+            } else {
+                // Verify against the full IDE matrix from minimum supported build through latest EAP
                 select {
                     types = listOf(
+                        IntelliJPlatformType.IntellijIdea,
                         IntelliJPlatformType.PyCharm,
                         IntelliJPlatformType.WebStorm,
                         IntelliJPlatformType.RustRover,
                     )
-                    channels = listOf(ProductRelease.Channel.RELEASE)
+                    channels = listOf(
+                        ProductRelease.Channel.RELEASE,
+                        ProductRelease.Channel.EAP,
+                    )
                     sinceBuild = "253"
                 }
             }

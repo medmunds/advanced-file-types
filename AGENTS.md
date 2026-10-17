@@ -92,6 +92,16 @@ or full verification:
 ./gradlew check
 ```
 
+### Verify Plugin Compatibility (IntelliJ Plugin Verifier)
+Full IDE matrix verification (minimum supported build 2025.3 through latest EAP across IntelliJ IDEA, PyCharm, WebStorm, and RustRover):
+```bash
+./gradlew verifyPlugin
+```
+Minimal verification for local development (verifies only the current target IDE without downloading additional IDE distributions):
+```bash
+./gradlew verifyPlugin -PminimalVerification=true
+```
+
 ### Generate Documentation Screenshots
 Regenerates all light and dark documentation screenshots into `img/` using WebStorm via the Starter + Driver integration runner:
 ```bash
