@@ -17,12 +17,11 @@ import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.xmlb.annotations.XCollection
 import com.intellij.util.xmlb.annotations.XMap
+import com.medmunds.advancedfiletypes.ExternalLanguageResolver
 import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
-import com.medmunds.advancedfiletypes.gitattributes.LinguistLanguageResolver
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PathPatternMatcher
 import com.medmunds.advancedfiletypes.model.PatternSyntax
-import com.medmunds.advancedfiletypes.vscode.VsCodeLanguageResolver
 import com.medmunds.advancedfiletypes.vscode.VsCodeSettingsReader
 
 sealed class MatchResult {
@@ -35,7 +34,11 @@ sealed class MatchResult {
         val fileTypeName: String? = null
     ) : MatchResult()
     data class GitAttributesMatch(val pattern: String, val language: String, val fileType: FileType) : MatchResult()
-    data class GitAttributesUnsupportedMatch(val pattern: String, val language: String) : MatchResult()
+    data class GitAttributesUnsupportedMatch(
+        val pattern: String,
+        val language: String,
+        val fileTypeName: String? = null
+    ) : MatchResult()
     object NoMatch : MatchResult()
 }
 
@@ -54,8 +57,8 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
 
         var loadFromGitAttributes: Boolean = true
 
-        @XMap(entryTagName = "mapping", keyAttributeName = "language", valueAttributeName = "fileType")
-        var customVsCodeLanguageMappings: MutableMap<String, String> = mutableMapOf()
+        @XMap(entryTagName = "mapping", keyAttributeName = "language", valueAttributeName = "fileTypeName")
+        var customLanguageMappings: MutableMap<String, String> = mutableMapOf()
     }
 
     private var myState = State()
@@ -172,19 +175,19 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
                     null
                 }
                 if (pattern != null && PathPatternMatcher.matches(pattern, relativePath, fileName)) {
-                    return when (val resolution = VsCodeLanguageResolver.resolve(
+                    return when (val resolution = ExternalLanguageResolver.resolve(
                         association.languageId,
-                        myState.customVsCodeLanguageMappings
+                        myState.customLanguageMappings
                     )) {
-                        is VsCodeLanguageResolver.Resolution.Resolved ->
+                        is ExternalLanguageResolver.Resolution.Resolved ->
                             MatchResult.VsCodeMatch(association.pattern, association.languageId, resolution.fileType)
-                        is VsCodeLanguageResolver.Resolution.Unsupported ->
+                        is ExternalLanguageResolver.Resolution.Unsupported ->
                             MatchResult.VsCodeUnsupportedMatch(
                                 association.pattern,
                                 association.languageId,
                                 resolution.fileTypeName
                             )
-                        VsCodeLanguageResolver.Resolution.Unmapped ->
+                        ExternalLanguageResolver.Resolution.Unmapped ->
                             MatchResult.VsCodeUnsupportedMatch(association.pattern, association.languageId)
                     }
                 }
@@ -196,11 +199,21 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
             val service = project.getService(GitAttributesService::class.java)
             val language = service?.getLanguage(gitAttributesRelativePath)
             if (language != null) {
-                val fileType = LinguistLanguageResolver.resolveFileType(language)
-                if (fileType != null) {
-                    return MatchResult.GitAttributesMatch(gitAttributesRelativePath, language, fileType)
+                return when (val resolution = ExternalLanguageResolver.resolve(
+                    language,
+                    myState.customLanguageMappings
+                )) {
+                    is ExternalLanguageResolver.Resolution.Resolved ->
+                        MatchResult.GitAttributesMatch(gitAttributesRelativePath, language, resolution.fileType)
+                    is ExternalLanguageResolver.Resolution.Unsupported ->
+                        MatchResult.GitAttributesUnsupportedMatch(
+                            gitAttributesRelativePath,
+                            language,
+                            resolution.fileTypeName
+                        )
+                    ExternalLanguageResolver.Resolution.Unmapped ->
+                        MatchResult.GitAttributesUnsupportedMatch(gitAttributesRelativePath, language)
                 }
-                return MatchResult.GitAttributesUnsupportedMatch(gitAttributesRelativePath, language)
             }
         }
 

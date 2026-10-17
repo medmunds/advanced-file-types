@@ -48,6 +48,7 @@ When resolving a file's type, rules are evaluated in the following strict order,
 ### Key Components & Package Structure
 `com.medmunds.advancedfiletypes`
 - **`AdvancedFileTypeOverrider`**: Plugin entry point implementing `com.intellij.openapi.fileTypes.impl.FileTypeOverrider`.
+- **`ExternalLanguageResolver`**: Unified resolver for external language identifiers (VS Code and GitHub Linguist) to IntelliJ `FileType` instances via `language-map.json5`, custom project overrides, and case-insensitive fallback.
 - **`model/`**:
   - `FileTypeOverrideRule`: Data model for custom rules (pattern, fileType name, syntax mode: GLOB vs REGEX).
   - `PathPatternMatcher`: Compiled pattern matcher supporting glob-to-regex translation and direct regex matching.
@@ -55,11 +56,9 @@ When resolving a file's type, rules are evaluated in the following strict order,
   - `AdvancedFileTypeSettings`: Project-level service (`@Service(Service.Level.PROJECT)`) managing persistent state (`.idea/advancedFileTypes.xml`).
 - **`vscode/`**:
   - `VsCodeSettingsReader`: Reads `files.associations` from `.vscode/settings.json`.
-  - `VsCodeLanguageResolver`: Resolves VS Code language identifiers to IntelliJ `FileType` instances via `vscode-language-map.properties` and case-insensitive fallback.
   - `VsCodeSettingsFileListener`: `BulkFileListener` detecting changes to `.vscode/settings.json` to trigger file type refresh.
 - **`gitattributes/`**:
   - `GitAttributesService`: Project-level service managing a long-lived `git check-attr --stdin -z linguist-language` process with caching, timeout handling, and failure recovery.
-  - `LinguistLanguageResolver`: Maps Linguist language identifiers to IntelliJ `FileType` instances via `linguist-language-map.properties`.
   - `GitAttributesFileListener`: `BulkFileListener` detecting changes to any `.gitattributes` or `.git/info/attributes` files to trigger cache clear and file type refresh.
 - **`ui/`**:
   - `AdvancedFileTypeConfigurable`: Settings page registered under `preferences.fileTypes` (`Settings | Editor | File Types | Advanced File Types`).
@@ -135,9 +134,8 @@ Launches a test IDE instance with the plugin enabled:
 4. **API Currency & No Deprecated APIs:**
    - Do not introduce or use deprecated IntelliJ Platform APIs or Kotlin features. Always use modern, actively supported APIs for IntelliJ 2025.3+.
 5. **Language Mapping Updates:**
-   - When adding support for new language identifiers from VS Code, update `src/main/resources/com/medmunds/advancedfiletypes/vscode-language-map.properties`.
-   - When adding support for GitHub Linguist languages, update `src/main/resources/com/medmunds/advancedfiletypes/linguist-language-map.properties`.
-   - Ensure mapping tests in `VsCodeLanguageResolverTest` and `LinguistLanguageResolverTest` cover the new additions.
+   - When adding support for new language identifiers from VS Code or GitHub Linguist, update `src/main/resources/com/medmunds/advancedfiletypes/language-map.json5` under the appropriate IntelliJ FileType key.
+   - Ensure mapping tests in `ExternalLanguageResolverTest` cover the new additions.
 6. **Platform Event Notification:**
    Whenever rule settings or external association files change, call `AdvancedFileTypeSettings.notifyFileTypesChanged()` (which triggers `FileTypeManagerEx.getInstance().fireFileTypesChanged()`) so open editors update their syntax highlighting.
 7. **Dynamic Loading Compatibility:**

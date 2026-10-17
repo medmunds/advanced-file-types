@@ -15,7 +15,6 @@ import com.medmunds.advancedfiletypes.settings.MatchResult
 import com.medmunds.advancedfiletypes.ui.AdvancedFileTypeConfigurable
 import com.medmunds.advancedfiletypes.ui.FileTypeDisplayHelper
 import com.medmunds.advancedfiletypes.vscode.VsCodeAssociation
-import com.medmunds.advancedfiletypes.vscode.VsCodeLanguageResolver
 import com.medmunds.advancedfiletypes.vscode.VsCodeSettingsReader
 import org.junit.Assert
 import java.io.File
@@ -203,6 +202,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         val state = AdvancedFileTypeSettings.State()
         state.rules.add(FileTypeOverrideRule("templates/**/*.tpl", "HTML", PatternSyntax.GLOB))
         state.rules.add(FileTypeOverrideRule(".*\\.custom", "XML", PatternSyntax.REGEX))
+        state.customLanguageMappings["custom-lang"] = "JSON"
 
         settings.loadState(state)
 
@@ -215,6 +215,16 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals(".*\\.custom", loaded[1].pattern)
         Assert.assertEquals("XML", loaded[1].fileTypeName)
         Assert.assertEquals(PatternSyntax.REGEX, loaded[1].syntax)
+
+        Assert.assertEquals("JSON", settings.state.customLanguageMappings["custom-lang"])
+
+        // Test XML serialization format consistency (fileTypeName attribute)
+        val serialized = com.intellij.util.xmlb.XmlSerializer.serialize(state)
+        val xmlString = com.intellij.openapi.util.JDOMUtil.write(serialized)
+        Assert.assertTrue("Serialized XML should use 'fileTypeName' for customLanguageMappings", xmlString.contains("fileTypeName=\"JSON\""))
+
+        val deserialized = com.intellij.util.xmlb.XmlSerializer.deserialize(serialized, AdvancedFileTypeSettings.State::class.java)
+        Assert.assertEquals("JSON", deserialized.customLanguageMappings["custom-lang"])
     }
 
     fun testConfigurableLifecycle() {
@@ -312,26 +322,26 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
     }
 
     @Suppress("KotlinMisorderedAssertEqualsArguments")
-    fun testVsCodeLanguageResolver() {
+    fun testExternalLanguageResolver() {
         val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
         val xmlType = FileTypeManager.getInstance().findFileTypeByName("XML")
         Assert.assertNotNull(htmlType)
         Assert.assertNotNull(xmlType)
 
         // Predefined aliases
-        Assert.assertEquals(htmlType, VsCodeLanguageResolver.resolveFileType("html"))
-        Assert.assertEquals(xmlType, VsCodeLanguageResolver.resolveFileType("xml"))
+        Assert.assertEquals(htmlType, ExternalLanguageResolver.resolveFileType("html"))
+        Assert.assertEquals(xmlType, ExternalLanguageResolver.resolveFileType("xml"))
         val plainTextType = FileTypeManager.getInstance().findFileTypeByName("PLAIN_TEXT")
-        Assert.assertEquals(plainTextType, VsCodeLanguageResolver.resolveFileType("plaintext"))
+        Assert.assertEquals(plainTextType, ExternalLanguageResolver.resolveFileType("plaintext"))
 
         // Direct name matching
-        Assert.assertEquals(htmlType, VsCodeLanguageResolver.resolveFileType("HTML"))
+        Assert.assertEquals(htmlType, ExternalLanguageResolver.resolveFileType("HTML"))
 
         // Unsupported language returns null
-        Assert.assertNull(VsCodeLanguageResolver.resolveFileType("unknown_nonexistent_language_id_xyz"))
+        Assert.assertNull(ExternalLanguageResolver.resolveFileType("unknown_nonexistent_language_id_xyz"))
 
         // Custom mappings escape hatch
-        val customType = VsCodeLanguageResolver.resolveFileType(
+        val customType = ExternalLanguageResolver.resolveFileType(
             "custom_lang",
             mapOf("custom_lang" to "HTML")
         )
@@ -432,7 +442,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
             """.trimIndent()
         )
         VsCodeSettingsReader.clearCache()
-        settings.state.customVsCodeLanguageMappings["unavailable_language"] = "UnavailableMappedFileType123"
+        settings.state.customLanguageMappings["unavailable_language"] = "UnavailableMappedFileType123"
 
         val unsupportedFile = myFixture.addFileToProject("docs/unsupported.txt", "content").virtualFile
         val otherFile = myFixture.addFileToProject("docs/other.txt", "content").virtualFile
@@ -1078,5 +1088,34 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
             service.customProjectDirectory = tempGitDir
             service.clearCache()
         }
+    }
+
+    fun testGitAttributesUnsupportedAndCustomLanguageMappings() {
+        addGitAttributes("*.custom linguist-language=CustomLang\n*.unavail linguist-language=UnavailableLang\n")
+
+        val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
+        Assert.assertNotNull(htmlType)
+
+        // Custom mapping override
+        settings.state.customLanguageMappings["CustomLang"] = "HTML"
+        settings.state.customLanguageMappings["UnavailableLang"] = "UnavailableMappedFileType999"
+
+        val customFile = myFixture.addFileToProject("test.custom", "content").virtualFile
+        Assert.assertEquals(htmlType, overrider.getOverriddenFileType(customFile))
+
+        val unavailFile = myFixture.addFileToProject("test.unavail", "content").virtualFile
+        Assert.assertNull(overrider.getOverriddenFileType(unavailFile))
+
+        val unavailMatch = settings.evaluateMatch("test.unavail", "test.unavail", includeGitAttributes = true)
+        Assert.assertTrue(unavailMatch is MatchResult.GitAttributesUnsupportedMatch)
+        Assert.assertEquals("UnavailableMappedFileType999", (unavailMatch as MatchResult.GitAttributesUnsupportedMatch).fileTypeName)
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        configurable.testPathField.text = "test.unavail"
+        configurable.updateTestResult()
+        Assert.assertTrue(configurable.testResultCell.component.text.contains("UnavailableMappedFileType999"))
+        Assert.assertEquals(FileTypeDisplayHelper.iconForUnsupported(), configurable.testResultCell.component.icon)
+        configurable.disposeUIResources()
     }
 }

@@ -4,10 +4,14 @@
 
 ## [Unreleased]
 
+### Added
+* Support for custom mappings of VS Code and Linguist language IDs to IDE file types in the settings file.
+
 ### Changed
 * Moved the Advanced File Types settings page under **Settings | Editor | File Types**.
 * Test Pattern Matching now displays the global file type when no override rule applies.
 * Test Pattern Matching now highlights the matching pattern in the rules list.
+* Refined and corrected some built-in VS Code and Linguist language ID mappings.
 
 ### Fixed
 * Stop at the first matching rule when its target file type is unavailable in the current IDE.

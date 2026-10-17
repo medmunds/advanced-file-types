@@ -321,12 +321,21 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 )
             }
             is MatchResult.GitAttributesUnsupportedMatch -> {
+                val fileTypeName = matchResult.fileTypeName
                 setResult(
-                    typeText = FileTypeDisplayHelper.displayTextForUnknown(
-                        matchResult.language,
-                        UnknownFileTypeOrigin.LINGUIST_IDENTIFIER
-                    ),
-                    typeIcon = FileTypeDisplayHelper.iconForUnknown(),
+                    typeText = if (fileTypeName != null) {
+                        FileTypeDisplayHelper.displayTextForUnknown(fileTypeName, UnknownFileTypeOrigin.NO_IDE_SUPPORT)
+                    } else {
+                        FileTypeDisplayHelper.displayTextForUnknown(
+                            matchResult.language,
+                            UnknownFileTypeOrigin.LINGUIST_IDENTIFIER
+                        )
+                    },
+                    typeIcon = if (fileTypeName != null) {
+                        FileTypeDisplayHelper.iconForUnsupported()
+                    } else {
+                        FileTypeDisplayHelper.iconForUnknown()
+                    },
                     detailText = AdvancedFileTypesBundle.message(
                         "settings.test.matched.gitattributes.pattern",
                         escapeHtml(matchResult.language)

@@ -115,8 +115,28 @@ Even when the plugin *can* determine the correct IDE file type, it may require l
 
 The plugin automatically reloads rules whenever the VS Code settings or Git attributes files are changed. (This only watches files inside the project directory. Global Git attributes are respected, but if they change you'll need to clear the checkbox, apply the settings change, and re-enable it to pick up the updates.)
 
+#### Custom language ID mappings
+
+If your project uses custom, proprietary, or newly introduced language identifiers in `.vscode/settings.json` or `.gitattributes` that are not recognized by default, you can define custom language ID mappings that add to or override the plugin's built-in set.
+
+This is an advanced feature meant for unusual situations, and there is no settings UI for it. Editing settings files directly can break things. In `.idea/advancedFileTypes.xml` add a `<customLanguageMappings>` block:
+
+```xml
+<component name="AdvancedFileTypeSettings">
+  <!-- The <rules> section is managed by the settings UI. Do not edit it. -->
+  <rules><!-- ... --></rules>
+  <!-- Add this: -->
+  <customLanguageMappings>
+    <mapping language="my-custom-lang" fileTypeName="HTML" />
+    <mapping language="custom-dsl" fileTypeName="PLAIN_TEXT" />
+  </customLanguageMappings>
+</component>
+```
+
+The `language` is the identifier that appears in your VS Code settings or `linguist-language`, and the `fileTypeName` is the IDE file type's exact internal name, which is often different from the name displayed in the IDE. (To figure out the internal name, create a temporary pattern rule with that file type in the settings UI, and then check the `<rules>` section of the settings file to find the `fileTypeName` attribute.)
+
 [vscode-language-id]: https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
-[linguist-language-id]: https://github.com/github/linguist/blob/master/lib/linguist/languages.yml
+[linguist-language-id]: https://github.com/github-linguist/linguist/blob/master/lib/linguist/languages.yml
 
 ## Why this plugin?
 

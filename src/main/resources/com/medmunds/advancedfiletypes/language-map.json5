@@ -1,0 +1,513 @@
+// Static mapping from IntelliJ FileType names to language identifiers and aliases
+// used by VS Code (files.associations) and GitHub Linguist (.gitattributes linguist-language).
+//
+// Reference sources:
+// - VS Code Known Language Identifiers: https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
+// - GitHub Linguist languages.yml: https://github.com/github-linguist/linguist/blob/master/lib/linguist/languages.yml
+//
+// Schema: { "IntelliJ_FileType_Name": ["alias1", "alias2", ...] }
+// - Keys: Exact, case-sensitive JetBrains FileType.getName() identifiers.
+// - Aliases: Lowercase external identifiers (resolved case-insensitively against incoming language IDs).
+// Keys and alias arrays must be sorted alphabetically.
+{
+  ".env file": [
+    "dotenv"
+  ],
+  "ActionScript": [
+    "actionscript"
+  ],
+  "Ada": [
+    "ada",
+    "ada2005",
+    "ada95"
+  ],
+  "Apex": [
+    "apex"
+  ],
+  "AsciiDoc": [
+    "asciidoc"
+  ],
+  "Astro": [
+    "astro"
+  ],
+  "AutoHotkey": [
+    "ahk",
+    "autohotkey"
+  ],
+  "Batch": [
+    "bat",
+    "batchfile",
+    "dosbatch",
+    "winbatch"
+  ],
+  "BibTeX": [
+    "bibtex"
+  ],
+  "Blade": [
+    "blade"
+  ],
+  "C#": [
+    "c#",
+    "cake",
+    "cakescript",
+    "csharp"
+  ],
+  "C++": [
+    "c",
+    "c++",
+    "cpp"
+  ],
+  "CFML": [
+    "cfm",
+    "cfml",
+    "coldfusion"
+  ],
+  "Clojure": [
+    "clojure"
+  ],
+  "CMake": [
+    "cmake"
+  ],
+  "CoffeeScript": [
+    "coffee",
+    "coffee-script",
+    "coffeescript"
+  ],
+  "Crystal": [
+    "crystal"
+  ],
+  "CSS": [
+    "css"
+  ],
+  "CUDA": [
+    "cuda",
+    "cuda-cpp"
+  ],
+  "Cython": [
+    "cython",
+    "pyrex"
+  ],
+  "D": [
+    "d",
+    "dlang"
+  ],
+  "Dart": [
+    "dart"
+  ],
+  "Diff": [
+    "diff",
+    "udiff"
+  ],
+  "Docker Compose": [
+    "compose",
+    "dockercompose"
+  ],
+  "Dockerfile": [
+    "containerfile",
+    "docker",
+    "dockerfile"
+  ],
+  "DOT": [
+    "graphviz (dot)"
+  ],
+  "Elixir": [
+    "elixir"
+  ],
+  "Elm file": [
+    "elm"
+  ],
+  "Erlang": [
+    "erlang"
+  ],
+  "F#": [
+    "f#",
+    "fsharp"
+  ],
+  "fish": [
+    "fish"
+  ],
+  "Fortran": [
+    "fortran",
+    "fortran free form"
+  ],
+  "FTL": [
+    "freemarker",
+    "ftl"
+  ],
+  "GDScript": [
+    "gdscript"
+  ],
+  "Gherkin": [
+    "cucumber",
+    "gherkin"
+  ],
+  "GitConfig file": [
+    "git config",
+    "gitconfig",
+    "gitmodules"
+  ],
+  "GitIgnore file": [
+    "git-ignore",
+    "gitignore",
+    "ignore",
+    "ignore list"
+  ],
+  "GLSL": [
+    "glsl"
+  ],
+  "Go": [
+    "go",
+    "golang"
+  ],
+  "GraphQL": [
+    "graphql"
+  ],
+  "Groovy": [
+    "gradle",
+    "groovy"
+  ],
+  "Haml": [
+    "haml"
+  ],
+  "Handlebars/Mustache": [
+    "handlebars",
+    "hbs",
+    "htmlbars"
+  ],
+  "Haskell": [
+    "haskell"
+  ],
+  "Haxe": [
+    "haxe"
+  ],
+  "HCL": [
+    "hashicorp configuration language",
+    "hcl",
+    "opentofu",
+    "terraform"
+  ],
+  "HLSL": [
+    "hlsl"
+  ],
+  "HTML": [
+    "html",
+    "xhtml"
+  ],
+  "HTTP Request": [
+    "http"
+  ],
+  "INI": [
+    "dosini",
+    "ini"
+  ],
+  "JAVA": [
+    "java"
+  ],
+  "JavaScript": [
+    "javascript",
+    "javascriptreact",
+    "js",
+    "node"
+  ],
+  "Jinja2": [
+    "django",
+    "html+django",
+    "html+jinja",
+    "htmldjango",
+    "jinja"
+  ],
+  "JSON": [
+    "geojson",
+    "json",
+    "jsonld",
+    "sarif",
+    "topojson"
+  ],
+  "JSON5": [
+    "json with comments",
+    "json5",
+    "jsonc"
+  ],
+  "JSONL": [
+    "json lines",
+    "jsonl"
+  ],
+  "Jsonnet": [
+    "jsonnet"
+  ],
+  "Julia": [
+    "julia"
+  ],
+  "Jupyter Notebook": [
+    "ipython notebook",
+    "jupyter notebook"
+  ],
+  "Kotlin": [
+    "kotlin"
+  ],
+  "LaTeX": [
+    "latex",
+    "tex"
+  ],
+  "LESS": [
+    "less"
+  ],
+  "Liquid": [
+    "liquid"
+  ],
+  "Lua": [
+    "lua"
+  ],
+  "Makefile": [
+    "bsdmake",
+    "make",
+    "makefile",
+    "mf"
+  ],
+  "Markdown": [
+    "markdown",
+    "md",
+    "pandoc"
+  ],
+  "Mermaid": [
+    "mermaid"
+  ],
+  "Nim": [
+    "nim"
+  ],
+  "Nix": [
+    "nix",
+    "nixos"
+  ],
+  "ObjectiveC": [
+    "objc",
+    "objc++",
+    "objective-c",
+    "objective-c++",
+    "objective-cpp",
+    "objectivec",
+    "objectivec++"
+  ],
+  "OCaml": [
+    "ocaml"
+  ],
+  "Pascal": [
+    "delphi",
+    "pascal"
+  ],
+  "Perl": [
+    "cperl",
+    "perl",
+    "perl6",
+    "raku"
+  ],
+  "PHP": [
+    "php"
+  ],
+  "PLAIN_TEXT": [
+    "fundamental",
+    "log",
+    "plain text",
+    "plaintext"
+  ],
+  "PlantUML": [
+    "plantuml"
+  ],
+  "PostCSS": [
+    "postcss"
+  ],
+  "PowerShell": [
+    "posh",
+    "powershell",
+    "pwsh"
+  ],
+  "Prisma": [
+    "prisma"
+  ],
+  "Properties": [
+    "java properties",
+    "properties"
+  ],
+  "Protocol Buffer": [
+    "proto",
+    "protobuf",
+    "protocol buffer",
+    "protocol buffers"
+  ],
+  "Pug": [
+    "jade",
+    "pug"
+  ],
+  "Puppet": [
+    "puppet"
+  ],
+  "PureScript": [
+    "purescript"
+  ],
+  "Python": [
+    "python",
+    "python3"
+  ],
+  "QML": [
+    "qml"
+  ],
+  "R": [
+    "r",
+    "rscript"
+  ],
+  "Racket": [
+    "racket"
+  ],
+  "Razor": [
+    "razor"
+  ],
+  "Reason": [
+    "reason"
+  ],
+  "ReST": [
+    "restructuredtext",
+    "rst"
+  ],
+  "Roff": [
+    "groff",
+    "man page",
+    "manpage",
+    "roff"
+  ],
+  "Ruby": [
+    "jruby",
+    "rake",
+    "rb",
+    "ruby"
+  ],
+  "Rust": [
+    "rs",
+    "rust"
+  ],
+  "SAS": [
+    "sas"
+  ],
+  "SASS": [
+    "sass"
+  ],
+  "Scala": [
+    "scala"
+  ],
+  "Scheme": [
+    "scheme"
+  ],
+  "SCSS": [
+    "scss"
+  ],
+  "ShaderLab": [
+    "shaderlab"
+  ],
+  "Shell Script": [
+    "bash",
+    "envrc",
+    "sh",
+    "shell",
+    "shell-script",
+    "shellscript",
+    "zsh"
+  ],
+  "Slim": [
+    "slim"
+  ],
+  "Smarty": [
+    "smarty"
+  ],
+  "Solidity file": [
+    "solidity"
+  ],
+  "SQL": [
+    "plpgsql",
+    "plsql",
+    "sql",
+    "tsql"
+  ],
+  "Stylus": [
+    "stylus"
+  ],
+  "Svelte": [
+    "svelte"
+  ],
+  "Swift": [
+    "swift"
+  ],
+  "SystemVerilog": [
+    "systemverilog"
+  ],
+  "Tcl": [
+    "tcl"
+  ],
+  "Thrift": [
+    "thrift"
+  ],
+  "TOML": [
+    "toml"
+  ],
+  "Twig": [
+    "twig"
+  ],
+  "TypeScript": [
+    "ts",
+    "typescript",
+    "typescriptreact"
+  ],
+  "Typst": [
+    "typst"
+  ],
+  "V": [
+    "v",
+    "vlang"
+  ],
+  "Vala": [
+    "vala"
+  ],
+  "Verilog": [
+    "verilog"
+  ],
+  "VHDL": [
+    "vhdl"
+  ],
+  "Visual Basic": [
+    "vb",
+    "vb .net",
+    "vb.net",
+    "vbnet",
+    "visual basic",
+    "visual basic .net"
+  ],
+  "VTL": [
+    "velocity template language",
+    "vtl"
+  ],
+  "Vue.js": [
+    "vue"
+  ],
+  "WebAssembly": [
+    "wasm",
+    "wast",
+    "wat",
+    "webassembly"
+  ],
+  "WGSL": [
+    "wgsl"
+  ],
+  "XML": [
+    "rss",
+    "wsdl",
+    "xml",
+    "xsd",
+    "xsl",
+    "xslt"
+  ],
+  "YAML": [
+    "yaml",
+    "yml"
+  ],
+  "Zig": [
+    "zig"
+  ]
+}
