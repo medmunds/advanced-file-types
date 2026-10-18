@@ -4,6 +4,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.UnknownFileType
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
@@ -1119,5 +1120,39 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertTrue(configurable.testResultCell.component.text.contains("UnavailableMappedFileType999"))
         Assert.assertEquals(FileTypeDisplayHelper.iconForUnsupported(), configurable.testResultCell.component.icon)
         configurable.disposeUIResources()
+    }
+
+    fun testFindProjectForFileWithinProject() {
+        val file = myFixture.addFileToProject("src/sub/nested.txt", "content").virtualFile
+        val resolvedProject = overrider.findProjectForFile(file)
+        Assert.assertEquals("Project for file in project directory should resolve to current project", project, resolvedProject)
+    }
+
+    fun testFindProjectForFileOutsideProject() {
+        val outsideTempFile = File.createTempFile("adv-outside", ".txt")
+        try {
+            val virtualOutsideFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(outsideTempFile)
+            Assert.assertNotNull(virtualOutsideFile)
+            val resolvedProject = overrider.findProjectForFile(virtualOutsideFile!!)
+            Assert.assertNull("File outside all project roots should resolve to null project", resolvedProject)
+        } finally {
+            outsideTempFile.delete()
+        }
+    }
+
+    fun testGetProjectRelativePathResolution() {
+        val file = myFixture.addFileToProject("src/sub/nested.txt", "content").virtualFile
+        val relPath = settings.getProjectRelativePath(file)
+        Assert.assertEquals("src/sub/nested.txt", relPath)
+
+        val outsideTempFile = File.createTempFile("adv-outside-rel", ".txt")
+        try {
+            val virtualOutsideFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(outsideTempFile)
+            Assert.assertNotNull(virtualOutsideFile)
+            val outsideRelPath = settings.getProjectRelativePath(virtualOutsideFile!!)
+            Assert.assertNull("Outside file should not resolve to a relative path", outsideRelPath)
+        } finally {
+            outsideTempFile.delete()
+        }
     }
 }

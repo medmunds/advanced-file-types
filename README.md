@@ -15,7 +15,8 @@ Using the plugin, you could…
 * [Usage](#usage)
   * [Glob patterns](#glob-patterns)
   * [Regular expression patterns](#regular-expression-patterns)
-  * [VS Code setttings and .gitattributes linguist-language support](#vs-code-settings-and-gitattributes-linguist-language-support) 
+  * [VS Code setttings and .gitattributes linguist-language support](#vs-code-settings-and-gitattributes-linguist-language-support)
+  * [Limitations](#limitations)
 * [Why this plugin?](#why-this-plugin)
 * [Screenshots](#screenshots)
 * [Development](#development)
@@ -137,6 +138,16 @@ The `language` is the identifier that appears in your VS Code settings or `lingu
 
 [vscode-language-id]: https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers
 [linguist-language-id]: https://github.com/github-linguist/linguist/blob/master/lib/linguist/languages.yml
+
+### Limitations
+
+Advanced File Types overrides do not apply to files located outside the project root folder. This includes:
+* Externally attached content roots
+* Attached projects in other directories
+* Symlinks that lead out of the project directory
+* Scratch files
+
+Any files outside the project root folder are handled by the IDE's global file type associations.
 
 ## Why this plugin?
 

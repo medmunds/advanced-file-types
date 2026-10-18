@@ -30,6 +30,7 @@ When resolving a file's type, rules are evaluated in the following strict order,
 * **`FileTypeOverrider` runs at the VFS level before PSI trees exist.**
 * **Never invoke PSI operations or high-level project index queries inside file type resolution.** Doing so causes circular file-type resolution dependencies, deadlocks, and threading violations.
 * File parsing for external configuration (such as `.vscode/settings.json`) must use lightweight parsing (e.g., `json5-java` with `VfsUtilCore.loadText` / `VirtualFile.contentsToByteArray()`) rather than PSI or IntelliJ JSON PSI files.
+* Project resolution and relative path calculations must use fast VFS hierarchy checks (`VfsUtilCore.isAncestor` / `VfsUtilCore.getRelativePath`) over `ProjectManager.openProjects` rather than `ProjectLocator.guessProjectForFile` or `ProjectFileIndex` queries.
 * Recursion guard: `AdvancedFileTypeOverrider` uses a `ThreadLocal<Boolean>` flag (`isResolving`) to prevent infinite recursion during resolution.
 
 ### Dynamic Plugin Loading (No IDE Restart)

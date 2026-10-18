@@ -11,7 +11,6 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.ex.FileTypeManagerEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
-import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.Condition
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
@@ -107,7 +106,7 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
     }
 
     /**
-     * Resolves the relative path of a virtual file with respect to the project or its content roots.
+     * Resolves the relative path of a virtual file with respect to the project directory or base path.
      */
     fun getProjectRelativePath(file: VirtualFile): String? {
         val projectDir = project.guessProjectDir()
@@ -116,15 +115,12 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
             if (rel != null) return rel
         }
 
-        if (!project.isDisposed && project.isInitialized && !project.isDefault) {
-            try {
-                val contentRoot = ProjectFileIndex.getInstance(project).getContentRootForFile(file)
-                if (contentRoot != null) {
-                    val rel = VfsUtilCore.getRelativePath(file, contentRoot, '/')
-                    if (rel != null) return rel
-                }
-            } catch (_: Throwable) {
-                // Ignore index/model errors during early startup or background checks
+        val basePath = project.basePath
+        if (!basePath.isNullOrBlank()) {
+            val normalizedBasePath = basePath.replace('\\', '/').trimEnd('/')
+            val filePath = file.path
+            if (filePath.startsWith("$normalizedBasePath/")) {
+                return filePath.removePrefix("$normalizedBasePath/")
             }
         }
 
@@ -135,8 +131,7 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
      * Resolves the relative path of a virtual file with respect to the project directory containing .gitattributes.
      */
     fun getProjectDirRelativePath(file: VirtualFile): String? {
-        val projectDir = project.guessProjectDir() ?: return null
-        return VfsUtilCore.getRelativePath(file, projectDir, '/')
+        return getProjectRelativePath(file)
     }
 
     /**
