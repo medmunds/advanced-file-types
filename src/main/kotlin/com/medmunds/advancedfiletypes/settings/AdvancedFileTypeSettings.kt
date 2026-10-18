@@ -1,5 +1,7 @@
 package com.medmunds.advancedfiletypes.settings
 
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.TransactionGuard
@@ -7,6 +9,7 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.ex.FileTypeManagerEx
@@ -17,6 +20,7 @@ import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.xmlb.annotations.XCollection
 import com.intellij.util.xmlb.annotations.XMap
+import com.medmunds.advancedfiletypes.AdvancedFileTypesBundle
 import com.medmunds.advancedfiletypes.ExternalLanguageResolver
 import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
@@ -68,7 +72,93 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
     }
 
     override fun loadState(state: State) {
-        myState = state
+        var hadErrors = false
+        val validRules = mutableListOf<FileTypeOverrideRule>()
+        val rawRules: List<*> = (state.rules as? List<*>) ?: run {
+            hadErrors = true
+            emptyList<Any?>()
+        }
+
+        for (item in rawRules) {
+            if (item !is FileTypeOverrideRule) {
+                LOG.warn("Ignoring invalid or unrecognized rule entry in advancedFileTypes.xml: $item")
+                hadErrors = true
+                continue
+            }
+            val pattern = (item.pattern as String?).orEmpty()
+            val fileTypeName = (item.fileTypeName as String?).orEmpty()
+            val syntax = (item.syntax as PatternSyntax?) ?: PatternSyntax.GLOB
+
+            if (pattern.isBlank() || fileTypeName.isBlank()) {
+                LOG.warn("Ignoring incomplete rule (empty pattern or fileTypeName) in advancedFileTypes.xml: $item")
+                hadErrors = true
+                continue
+            }
+
+            if (syntax == PatternSyntax.REGEX) {
+                try {
+                    PathPatternMatcher.compile(pattern, syntax)
+                } catch (e: Exception) {
+                    LOG.warn("Ignoring regex rule with invalid syntax in advancedFileTypes.xml: $pattern", e)
+                    hadErrors = true
+                    continue
+                }
+            }
+
+            validRules.add(FileTypeOverrideRule(pattern, fileTypeName, syntax))
+        }
+
+        val validMappings = mutableMapOf<String, String>()
+        val rawMappings: Map<*, *> = (state.customLanguageMappings as? Map<*, *>) ?: run {
+            hadErrors = true
+            emptyMap<Any?, Any?>()
+        }
+        for ((key, value) in rawMappings) {
+            val lang = key as? String
+            val type = value as? String
+            if (lang.isNullOrBlank() || type.isNullOrBlank()) {
+                LOG.warn("Ignoring invalid custom language mapping in advancedFileTypes.xml: $key -> $value")
+                hadErrors = true
+                continue
+            }
+            validMappings[lang] = type
+        }
+
+        myState.rules = validRules
+        myState.loadFromVsCodeSettings = state.loadFromVsCodeSettings
+        myState.loadFromGitAttributes = state.loadFromGitAttributes
+        myState.customLanguageMappings = validMappings
+
+        if (hadErrors) {
+            notifySettingsLoadError()
+        }
+    }
+
+    private fun notifySettingsLoadError() {
+        if (project.isDisposed || project.isDefault) return
+        val app = ApplicationManager.getApplication() ?: return
+        val notifyRunnable = Runnable {
+            if (project.isDisposed || project.isDefault) return@Runnable
+            try {
+                val group = NotificationGroupManager.getInstance().getNotificationGroup("Advanced File Types")
+                if (group != null) {
+                    @Suppress("DialogTitleCapitalization")
+                    val notification = group.createNotification(
+                        AdvancedFileTypesBundle.message("notification.settings.load.error.title"),
+                        AdvancedFileTypesBundle.message("notification.settings.load.error.content"),
+                        NotificationType.WARNING
+                    )
+                    notification.notify(project)
+                }
+            } catch (e: Throwable) {
+                LOG.warn("Failed to show settings load error notification", e)
+            }
+        }
+        if (app.isDispatchThread) {
+            notifyRunnable.run()
+        } else {
+            app.invokeLater(notifyRunnable, ModalityState.nonModal()) { project.isDisposed }
+        }
     }
 
     fun getRules(): List<FileTypeOverrideRule> {
@@ -242,6 +332,8 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
     }
 
     companion object {
+        private val LOG = Logger.getInstance(AdvancedFileTypeSettings::class.java)
+
         fun getInstance(project: Project): AdvancedFileTypeSettings {
             return project.getService(AdvancedFileTypeSettings::class.java)
         }

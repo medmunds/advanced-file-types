@@ -1175,4 +1175,97 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         // Calling notifyFileTypesChanged on EDT must execute safely
         AdvancedFileTypeSettings.notifyFileTypesChanged(project)
     }
+
+    fun testMalformedXmlDeserializationWithInvalidTag() {
+        val xml = """
+            <AdvancedFileTypeSettings>
+              <rules>
+                <rule pattern="*.html" fileTypeName="HTML"/>
+                <overrideRule pattern="*.txt" fileTypeName="PLAIN_TEXT" syntax="GLOB"/>
+                <unknownTag pattern="*.md" fileTypeName="Markdown"/>
+              </rules>
+            </AdvancedFileTypeSettings>
+        """.trimIndent()
+        val element = com.intellij.openapi.util.JDOMUtil.load(xml)
+        val deserialized = com.intellij.util.xmlb.XmlSerializer.deserialize(element, AdvancedFileTypeSettings.State::class.java)
+
+        var notificationReceived: com.intellij.notification.Notification? = null
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
+            override fun notify(notification: com.intellij.notification.Notification) {
+                notificationReceived = notification
+            }
+        })
+
+        settings.loadState(deserialized)
+
+        // Invalid rules should have been skipped, valid rule retained
+        val loadedRules = settings.getRules()
+        Assert.assertEquals(1, loadedRules.size)
+        Assert.assertEquals("*.txt", loadedRules[0].pattern)
+        Assert.assertEquals("PLAIN_TEXT", loadedRules[0].fileTypeName)
+
+        // Configurable component creation and reset must succeed without NullPointerException
+        val configurable = AdvancedFileTypeConfigurable(project)
+        val component = configurable.createComponent()
+        Assert.assertNotNull(component)
+        configurable.reset()
+        Assert.assertEquals(1, configurable.table.rowCount)
+        configurable.disposeUIResources()
+
+        // Notification must have been published
+        Assert.assertNotNull("A warning notification should be published on load error", notificationReceived)
+        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notificationReceived?.type)
+        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.error.title"), notificationReceived?.title)
+        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.error.content"), notificationReceived?.content)
+    }
+
+    fun testMalformedXmlWithInvalidRegexOrBlankFields() {
+        val state = AdvancedFileTypeSettings.State()
+        state.rules.add(FileTypeOverrideRule("", "HTML", PatternSyntax.GLOB)) // Blank pattern
+        state.rules.add(FileTypeOverrideRule("*.txt", "", PatternSyntax.GLOB)) // Blank file type
+        state.rules.add(FileTypeOverrideRule("[unclosed-regex", "HTML", PatternSyntax.REGEX)) // Invalid regex
+        state.rules.add(FileTypeOverrideRule("valid/*.txt", "PLAIN_TEXT", PatternSyntax.GLOB)) // Valid rule
+        state.customLanguageMappings[""] = "HTML" // Invalid mapping
+        state.customLanguageMappings["custom-lang"] = "JSON" // Valid mapping
+
+        var notificationReceived: com.intellij.notification.Notification? = null
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
+            override fun notify(notification: com.intellij.notification.Notification) {
+                notificationReceived = notification
+            }
+        })
+
+        settings.loadState(state)
+
+        val loadedRules = settings.getRules()
+        Assert.assertEquals(1, loadedRules.size)
+        Assert.assertEquals("valid/*.txt", loadedRules[0].pattern)
+        Assert.assertEquals("PLAIN_TEXT", loadedRules[0].fileTypeName)
+        Assert.assertEquals("JSON", settings.state.customLanguageMappings["custom-lang"])
+        Assert.assertNull(settings.state.customLanguageMappings[""])
+
+        Assert.assertNotNull("Notification should be published for malformed rules", notificationReceived)
+        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notificationReceived?.type)
+    }
+
+    fun testValidXmlLoadingDoesNotTriggerNotification() {
+        val state = AdvancedFileTypeSettings.State()
+        state.rules.add(FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB))
+        state.customLanguageMappings["custom-lang"] = "JSON"
+
+        var notificationReceived: com.intellij.notification.Notification? = null
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
+            override fun notify(notification: com.intellij.notification.Notification) {
+                notificationReceived = notification
+            }
+        })
+
+        settings.loadState(state)
+
+        Assert.assertNull("No notification should be published when loading valid state", notificationReceived)
+        Assert.assertEquals(1, settings.getRules().size)
+    }
 }

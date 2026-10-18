@@ -20,6 +20,7 @@
 * Prevented potential IDE freezes and UI delays during project startup when resolving `.gitattributes` file associations.
 * Prevented background thread stalls and editor lag caused by workspace index lock contention during file type resolution.
 * Prevented "Write-unsafe context" errors when refreshing file type associations during background updates.
+* Fixed settings panel failing to open when `advancedFileTypes.xml` contains syntax errors or unrecognized tags.
 
 ## [0.1.0] - Released 2026-10-13
 
