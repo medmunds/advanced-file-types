@@ -2,6 +2,7 @@ package com.medmunds.advancedfiletypes.settings
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.TransactionGuard
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
@@ -258,10 +259,10 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
                     fileTypeManager.fireFileTypesChanged()
                 }
             }
-            if (app.isDispatchThread) {
+            if (app.isDispatchThread && TransactionGuard.getInstance().isWritingAllowed) {
                 runnable.run()
             } else {
-                app.invokeLater(runnable, ModalityState.defaultModalityState(), isExpired)
+                app.invokeLater(runnable, ModalityState.nonModal(), isExpired)
             }
         }
     }

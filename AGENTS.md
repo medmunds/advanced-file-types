@@ -158,4 +158,7 @@ Launches a test IDE instance with the plugin enabled:
 11. **Changelog Maintenance (`CHANGELOG.md`):**
    - Record user-visible changes under the `[Unreleased]` section of `CHANGELOG.md`.
    - Only document changes that affect end users (e.g., new features, bug fixes, breaking behavior changes); omit purely internal refactoring, test updates, or developer documentation edits.
+   - Describe changes in a clear and concise manner, focusing on the impact on end users. It's OK to mention specific error messages a user may have seen, but save technical details for the commit message.
    - Categorize entries following the [Keep a Changelog](https://keepachangelog.com) standard sections (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`).
+12. **Commit Messages:**
+   - Draft a commit message that identifies the change/fix and summarizes technical details for developers.

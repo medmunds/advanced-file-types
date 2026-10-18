@@ -1155,4 +1155,24 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
             outsideTempFile.delete()
         }
     }
+
+    fun testNotifyFileTypesChangedFromBackgroundThread() {
+        // Calling notifyFileTypesChanged from a background thread must not throw Write-unsafe context errors
+        var backgroundError: Throwable? = null
+        val thread = Thread {
+            try {
+                AdvancedFileTypeSettings.notifyFileTypesChanged(project)
+            } catch (t: Throwable) {
+                backgroundError = t
+            }
+        }
+        thread.start()
+        thread.join(5000)
+        Assert.assertNull("notifyFileTypesChanged from background thread threw an error", backgroundError)
+    }
+
+    fun testNotifyFileTypesChangedOnEdt() {
+        // Calling notifyFileTypesChanged on EDT must execute safely
+        AdvancedFileTypeSettings.notifyFileTypesChanged(project)
+    }
 }

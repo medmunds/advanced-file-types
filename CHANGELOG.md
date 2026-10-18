@@ -19,6 +19,7 @@
 * Prevented `LockAccessDisallowed` exceptions during editor painting when resolving project-specific file types.
 * Prevented potential IDE freezes and UI delays during project startup when resolving `.gitattributes` file associations.
 * Prevented background thread stalls and editor lag caused by workspace index lock contention during file type resolution.
+* Prevented "Write-unsafe context" errors when refreshing file type associations during background updates.
 
 ## [0.1.0] - Released 2026-10-13
 
