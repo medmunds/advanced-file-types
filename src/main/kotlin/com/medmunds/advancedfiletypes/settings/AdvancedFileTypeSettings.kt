@@ -1,5 +1,6 @@
 package com.medmunds.advancedfiletypes.settings
 
+import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.application.ApplicationManager
@@ -10,6 +11,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.ex.FileTypeManagerEx
@@ -18,6 +20,9 @@ import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.Condition
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.options.ShowSettingsUtil
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.project.stateStore
 import com.intellij.util.xmlb.annotations.XCollection
 import com.intellij.util.xmlb.annotations.XMap
 import com.medmunds.advancedfiletypes.AdvancedFileTypesBundle
@@ -26,6 +31,7 @@ import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
 import com.medmunds.advancedfiletypes.model.PathPatternMatcher
 import com.medmunds.advancedfiletypes.model.PatternSyntax
+import com.medmunds.advancedfiletypes.ui.AdvancedFileTypeConfigurable
 import com.medmunds.advancedfiletypes.vscode.VsCodeSettingsReader
 
 sealed class MatchResult {
@@ -46,10 +52,12 @@ sealed class MatchResult {
     object NoMatch : MatchResult()
 }
 
+private const val SETTINGS_FILE_NAME = "advancedFileTypes.xml"
+
 @Service(Service.Level.PROJECT)
 @State(
     name = "AdvancedFileTypeSettings",
-    storages = [Storage("advancedFileTypes.xml")]
+    storages = [Storage(SETTINGS_FILE_NAME)]
 )
 class AdvancedFileTypeSettings(private val project: Project) : PersistentStateComponent<AdvancedFileTypeSettings.State> {
 
@@ -140,14 +148,26 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
         val notifyRunnable = Runnable {
             if (project.isDisposed || project.isDefault) return@Runnable
             try {
-                val group = NotificationGroupManager.getInstance().getNotificationGroup("Advanced File Types")
+                val group = NotificationGroupManager.getInstance().getNotificationGroup("com.medmunds.advancedfiletypes.settingsLoadErrors")
                 if (group != null) {
-                    @Suppress("DialogTitleCapitalization")
                     val notification = group.createNotification(
                         AdvancedFileTypesBundle.message("notification.settings.load.error.title"),
                         AdvancedFileTypesBundle.message("notification.settings.load.error.content"),
-                        NotificationType.WARNING
+                        NotificationType.ERROR
                     )
+                    notification.addAction(NotificationAction.createSimple(
+                        AdvancedFileTypesBundle.message("notification.settings.load.error.action.openSettings")
+                    ) {
+                        ShowSettingsUtil.getInstance().showSettingsDialog(
+                            project,
+                            AdvancedFileTypeConfigurable::class.java
+                        )
+                    })
+                    notification.addAction(NotificationAction.createSimple(
+                        AdvancedFileTypesBundle.message("notification.settings.load.error.action.openFile")
+                    ) {
+                        openSettingsFile(project)
+                    })
                     notification.notify(project)
                 }
             } catch (e: Throwable) {
@@ -328,6 +348,19 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
             is MatchResult.VsCodeUnsupportedMatch,
             is MatchResult.GitAttributesUnsupportedMatch,
             MatchResult.NoMatch -> null
+        }
+    }
+
+    /**
+     * Open an editor on our settings file in project.
+     * (Used from error notifications about settings problems.)
+     */
+    private fun openSettingsFile(project: Project) {
+        val projectConfigDir = project.stateStore.directoryStorePath
+        val settingsFile = projectConfigDir?.resolve(SETTINGS_FILE_NAME)
+        val virtualFile = settingsFile?.let { LocalFileSystem.getInstance().refreshAndFindFileByNioFile(it) }
+        if (virtualFile != null) {
+            FileEditorManager.getInstance(project).openFile(virtualFile, true)
         }
     }
 

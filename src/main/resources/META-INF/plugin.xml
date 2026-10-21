@@ -54,9 +54,8 @@
     <!-- Extensions defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <!--suppress PluginXmlCapitalization -->
-        <notificationGroup id="Advanced File Types"
-                           displayType="BALLOON"
+        <notificationGroup id="com.medmunds.advancedfiletypes.settingsLoadErrors"
+                           displayType="STICKY_BALLOON"
                            bundle="messages.AdvancedFileTypesBundle"
                            key="notification.group.advancedFileTypes"/>
         <fileTypeOverrider implementation="com.medmunds.advancedfiletypes.AdvancedFileTypeOverrider"/>

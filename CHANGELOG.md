@@ -6,6 +6,7 @@
 
 ### Added
 * Support for custom mappings of VS Code and Linguist language IDs to IDE file types in the settings file.
+* Notification for invalid entries in the settings file.
 
 ### Changed
 * Moved the Advanced File Types settings page under **Settings | Editor | File Types**.

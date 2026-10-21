@@ -1187,7 +1187,6 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
             </AdvancedFileTypeSettings>
         """.trimIndent()
         val element = com.intellij.openapi.util.JDOMUtil.load(xml)
-        val deserialized = com.intellij.util.xmlb.XmlSerializer.deserialize(element, AdvancedFileTypeSettings.State::class.java)
 
         var notificationReceived: com.intellij.notification.Notification? = null
         val connection = project.messageBus.connect(testRootDisposable)
@@ -1197,7 +1196,9 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
             }
         })
 
-        settings.loadState(deserialized)
+        settings.loadState(
+            com.intellij.util.xmlb.XmlSerializer.deserialize(element, AdvancedFileTypeSettings.State::class.java)
+        )
 
         // Invalid rules should have been skipped, valid rule retained
         val loadedRules = settings.getRules()
@@ -1214,10 +1215,20 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         configurable.disposeUIResources()
 
         // Notification must have been published
-        Assert.assertNotNull("A warning notification should be published on load error", notificationReceived)
-        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notificationReceived?.type)
+        Assert.assertNotNull("An error notification should be published on load error", notificationReceived)
+        Assert.assertEquals(com.intellij.notification.NotificationType.ERROR, notificationReceived?.type)
         Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.error.title"), notificationReceived?.title)
         Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.error.content"), notificationReceived?.content)
+        val actions = notificationReceived!!.actions
+        Assert.assertEquals(2, actions.size)
+        Assert.assertEquals(
+            AdvancedFileTypesBundle.message("notification.settings.load.error.action.openSettings"),
+            actions[0].templatePresentation.text
+        )
+        Assert.assertEquals(
+            AdvancedFileTypesBundle.message("notification.settings.load.error.action.openFile"),
+            actions[1].templatePresentation.text
+        )
     }
 
     fun testMalformedXmlWithInvalidRegexOrBlankFields() {
@@ -1247,7 +1258,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertNull(settings.state.customLanguageMappings[""])
 
         Assert.assertNotNull("Notification should be published for malformed rules", notificationReceived)
-        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notificationReceived?.type)
+        Assert.assertEquals(com.intellij.notification.NotificationType.ERROR, notificationReceived?.type)
     }
 
     fun testValidXmlLoadingDoesNotTriggerNotification() {
