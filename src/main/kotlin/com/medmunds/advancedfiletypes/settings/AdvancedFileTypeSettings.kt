@@ -14,7 +14,9 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
+import com.intellij.openapi.fileTypes.UnknownFileType
 import com.intellij.openapi.fileTypes.ex.FileTypeManagerEx
+import org.jetbrains.annotations.TestOnly
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.util.Condition
@@ -74,6 +76,7 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
     }
 
     private var myState = State()
+    private val warnedUnavailableFileTypes = mutableSetOf<String>()
 
     override fun getState(): State {
         return myState
@@ -137,9 +140,64 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
         myState.loadFromGitAttributes = state.loadFromGitAttributes
         myState.customLanguageMappings = validMappings
 
+        val unavailableTypes = (validRules.map { it.fileTypeName } + validMappings.values)
+            .filter { isUnavailableFileType(it) }
+            .distinct()
+
+        val newUnavailableTypes = unavailableTypes.filter { it !in warnedUnavailableFileTypes }
+        if (newUnavailableTypes.isNotEmpty()) {
+            warnedUnavailableFileTypes.addAll(newUnavailableTypes)
+            notifyUnavailableFileTypes(newUnavailableTypes)
+        }
+
         if (hadErrors) {
             notifySettingsLoadError()
         }
+    }
+
+    private fun isUnavailableFileType(fileTypeName: String): Boolean {
+        val fileType = FileTypeManager.getInstance().findFileTypeByName(fileTypeName)
+        return fileType == null || fileType == UnknownFileType.INSTANCE || fileType is UnknownFileType
+    }
+
+    private fun notifyUnavailableFileTypes(unavailableTypes: List<String>) {
+        if (project.isDisposed || project.isDefault) return
+        val app = ApplicationManager.getApplication() ?: return
+        val notifyRunnable = Runnable {
+            if (project.isDisposed || project.isDefault) return@Runnable
+            try {
+                val group = NotificationGroupManager.getInstance().getNotificationGroup("com.medmunds.advancedfiletypes.settingsLoadErrors")
+                if (group != null) {
+                    val typesString = unavailableTypes.sorted().joinToString(", ")
+                    val notification = group.createNotification(
+                        AdvancedFileTypesBundle.message("notification.settings.load.title"),
+                        AdvancedFileTypesBundle.message("notification.settings.load.missingFileTypes.content", typesString),
+                        NotificationType.WARNING
+                    )
+                    notification.addAction(NotificationAction.createSimple(
+                        AdvancedFileTypesBundle.message("notification.settings.load.action.openSettings")
+                    ) {
+                        ShowSettingsUtil.getInstance().showSettingsDialog(
+                            project,
+                            AdvancedFileTypeConfigurable::class.java
+                        )
+                    })
+                    notification.notify(project)
+                }
+            } catch (e: Throwable) {
+                LOG.warn("Failed to show settings load warning notification", e)
+            }
+        }
+        if (app.isDispatchThread) {
+            notifyRunnable.run()
+        } else {
+            app.invokeLater(notifyRunnable, ModalityState.nonModal()) { project.isDisposed }
+        }
+    }
+
+    @TestOnly
+    internal fun clearWarnedUnavailableFileTypes() {
+        warnedUnavailableFileTypes.clear()
     }
 
     private fun notifySettingsLoadError() {
@@ -151,12 +209,12 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
                 val group = NotificationGroupManager.getInstance().getNotificationGroup("com.medmunds.advancedfiletypes.settingsLoadErrors")
                 if (group != null) {
                     val notification = group.createNotification(
-                        AdvancedFileTypesBundle.message("notification.settings.load.error.title"),
-                        AdvancedFileTypesBundle.message("notification.settings.load.error.content"),
+                        AdvancedFileTypesBundle.message("notification.settings.load.title"),
+                        AdvancedFileTypesBundle.message("notification.settings.load.invalidConfig.content"),
                         NotificationType.ERROR
                     )
                     notification.addAction(NotificationAction.createSimple(
-                        AdvancedFileTypesBundle.message("notification.settings.load.error.action.openSettings")
+                        AdvancedFileTypesBundle.message("notification.settings.load.action.openSettings")
                     ) {
                         ShowSettingsUtil.getInstance().showSettingsDialog(
                             project,
@@ -164,7 +222,7 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
                         )
                     })
                     notification.addAction(NotificationAction.createSimple(
-                        AdvancedFileTypesBundle.message("notification.settings.load.error.action.openFile")
+                        AdvancedFileTypesBundle.message("notification.settings.load.action.openFile")
                     ) {
                         openSettingsFile(project)
                     })

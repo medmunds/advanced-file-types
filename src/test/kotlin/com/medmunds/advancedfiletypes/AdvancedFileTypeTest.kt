@@ -29,6 +29,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         settings = AdvancedFileTypeSettings.getInstance(project)
+        settings.clearWarnedUnavailableFileTypes()
         settings.setRules(emptyList())
 
         val tempDir = kotlin.io.path.createTempDirectory("adv-git-test").toFile()
@@ -45,6 +46,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            settings.clearWarnedUnavailableFileTypes()
             settings.setRules(emptyList())
             val service = GitAttributesService.getInstance(project)
             service.clearCache()
@@ -1217,16 +1219,16 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         // Notification must have been published
         Assert.assertNotNull("An error notification should be published on load error", notificationReceived)
         Assert.assertEquals(com.intellij.notification.NotificationType.ERROR, notificationReceived?.type)
-        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.error.title"), notificationReceived?.title)
-        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.error.content"), notificationReceived?.content)
+        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.title"), notificationReceived?.title)
+        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.invalidConfig.content"), notificationReceived?.content)
         val actions = notificationReceived!!.actions
         Assert.assertEquals(2, actions.size)
         Assert.assertEquals(
-            AdvancedFileTypesBundle.message("notification.settings.load.error.action.openSettings"),
+            AdvancedFileTypesBundle.message("notification.settings.load.action.openSettings"),
             actions[0].templatePresentation.text
         )
         Assert.assertEquals(
-            AdvancedFileTypesBundle.message("notification.settings.load.error.action.openFile"),
+            AdvancedFileTypesBundle.message("notification.settings.load.action.openFile"),
             actions[1].templatePresentation.text
         )
     }
@@ -1278,5 +1280,118 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
 
         Assert.assertNull("No notification should be published when loading valid state", notificationReceived)
         Assert.assertEquals(1, settings.getRules().size)
+    }
+
+    fun testUnavailableFileTypeWarningNotification() {
+        val state = AdvancedFileTypeSettings.State()
+        state.rules.add(FileTypeOverrideRule("docs/*.txt", "NonExistentTypeA", PatternSyntax.GLOB))
+        state.rules.add(FileTypeOverrideRule("src/*.txt", "NonExistentTypeB", PatternSyntax.GLOB))
+
+        val notifications = mutableListOf<com.intellij.notification.Notification>()
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
+            override fun notify(notification: com.intellij.notification.Notification) {
+                notifications.add(notification)
+            }
+        })
+
+        settings.loadState(state)
+
+        Assert.assertEquals(1, notifications.size)
+        val notification = notifications[0]
+        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notification.type)
+        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.title"), notification.title)
+        Assert.assertTrue(notification.content.contains("NonExistentTypeA"))
+        Assert.assertTrue(notification.content.contains("NonExistentTypeB"))
+
+        val actions = notification.actions
+        Assert.assertEquals(1, actions.size)
+        Assert.assertEquals(
+            AdvancedFileTypesBundle.message("notification.settings.load.action.openSettings"),
+            actions[0].templatePresentation.text
+        )
+    }
+
+    fun testUnavailableFileTypeSessionDeduplication() {
+        val state1 = AdvancedFileTypeSettings.State()
+        state1.rules.add(FileTypeOverrideRule("docs/*.txt", "NonExistentTypeA", PatternSyntax.GLOB))
+        state1.rules.add(FileTypeOverrideRule("src/*.txt", "NonExistentTypeB", PatternSyntax.GLOB))
+
+        val notifications = mutableListOf<com.intellij.notification.Notification>()
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
+            override fun notify(notification: com.intellij.notification.Notification) {
+                notifications.add(notification)
+            }
+        })
+
+        // First load triggers warning
+        settings.loadState(state1)
+        Assert.assertEquals(1, notifications.size)
+        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notifications[0].type)
+
+        // Second load with same unavailable types does NOT trigger another notification
+        val state2 = AdvancedFileTypeSettings.State()
+        state2.rules.add(FileTypeOverrideRule("docs/*.txt", "NonExistentTypeA", PatternSyntax.GLOB))
+        state2.rules.add(FileTypeOverrideRule("src/*.txt", "NonExistentTypeB", PatternSyntax.GLOB))
+        settings.loadState(state2)
+        Assert.assertEquals(1, notifications.size)
+
+        // Third load with a new unavailable type triggers warning only for the new type
+        val state3 = AdvancedFileTypeSettings.State()
+        state3.rules.add(FileTypeOverrideRule("docs/*.txt", "NonExistentTypeA", PatternSyntax.GLOB))
+        state3.rules.add(FileTypeOverrideRule("src/*.txt", "NonExistentTypeB", PatternSyntax.GLOB))
+        state3.rules.add(FileTypeOverrideRule("lib/*.txt", "NonExistentTypeC", PatternSyntax.GLOB))
+        settings.loadState(state3)
+        Assert.assertEquals(2, notifications.size)
+        val secondNotification = notifications[1]
+        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, secondNotification.type)
+        Assert.assertTrue(secondNotification.content.contains("NonExistentTypeC"))
+        Assert.assertFalse(secondNotification.content.contains("NonExistentTypeA"))
+    }
+
+    fun testUnavailableFileTypeInCustomLanguageMappingsTriggersWarning() {
+        val state = AdvancedFileTypeSettings.State()
+        state.customLanguageMappings["custom-lang"] = "NonExistentMappingType"
+
+        val notifications = mutableListOf<com.intellij.notification.Notification>()
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
+            override fun notify(notification: com.intellij.notification.Notification) {
+                notifications.add(notification)
+            }
+        })
+
+        settings.loadState(state)
+
+        Assert.assertEquals(1, notifications.size)
+        val notification = notifications[0]
+        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notification.type)
+        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.title"), notification.title)
+        Assert.assertTrue(notification.content.contains("NonExistentMappingType"))
+        Assert.assertEquals(1, notification.actions.size)
+    }
+
+    fun testMalformedXmlAndUnavailableFileTypesTriggersBoth() {
+        val state = AdvancedFileTypeSettings.State()
+        state.rules.add(FileTypeOverrideRule("", "HTML", PatternSyntax.GLOB)) // Blank pattern -> Error
+        state.rules.add(FileTypeOverrideRule("docs/*.txt", "NonExistentTypeX", PatternSyntax.GLOB)) // Unavailable type -> Warning
+
+        val notifications = mutableListOf<com.intellij.notification.Notification>()
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
+            override fun notify(notification: com.intellij.notification.Notification) {
+                notifications.add(notification)
+            }
+        })
+
+        settings.loadState(state)
+
+        Assert.assertEquals(2, notifications.size)
+        val warning = notifications.find { it.type == com.intellij.notification.NotificationType.WARNING }
+        val error = notifications.find { it.type == com.intellij.notification.NotificationType.ERROR }
+        Assert.assertNotNull(warning)
+        Assert.assertNotNull(error)
+        Assert.assertTrue(warning!!.content.contains("NonExistentTypeX"))
     }
 }
