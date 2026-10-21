@@ -70,7 +70,6 @@ object FileTypeDisplayHelper {
     /**
      * Returns the icon for a JetBrains file type that is not available in this IDE.
      */
-//    fun iconForUnsupported(): Icon = AllIcons.Nodes.PpInvalid
     fun iconForUnsupported(): Icon = AllIcons.General.Warning
 
     /**

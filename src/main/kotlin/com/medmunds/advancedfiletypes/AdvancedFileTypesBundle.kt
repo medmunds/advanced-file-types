@@ -16,6 +16,7 @@ internal object AdvancedFileTypesBundle {
     }
 
     @JvmStatic
+    @Suppress("unused")
     fun lazyMessage(@PropertyKey(resourceBundle = BUNDLE) key: String, vararg params: Any?): Supplier<@Nls String> {
         return instance.getLazyMessage(key, *params)
     }

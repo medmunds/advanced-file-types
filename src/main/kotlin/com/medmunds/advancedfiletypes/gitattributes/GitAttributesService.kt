@@ -284,10 +284,7 @@ class GitAttributesService(private val project: Project) : Disposable {
     private fun isValidGitExecutable(path: String?): Boolean {
         if (path.isNullOrBlank()) return false
         val file = File(path)
-        if (file.isAbsolute) {
-            return file.isFile && file.canExecute()
-        }
-        return true
+        return !file.isAbsolute || (file.isFile && file.canExecute())
     }
 
     /**

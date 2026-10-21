@@ -148,6 +148,7 @@ Launches a test IDE instance with the plugin enabled:
    - **Test Layering:** Do not duplicate unit-level tests at the integration or platform level unless there is a specific reason or interaction that warrants it.
    - **Pattern Matching:** Always verify pattern matching additions with parameterized unit tests in `PathPatternMatcherTest`.
    - **Verification:** Run `./gradlew check` before completing any code changes.
+   - **Code Quality & Inspections:** Run IntelliJ IDEA inspections on all modified and created files (using `mcp_idea_get_file_problems`) and ensure all error-level and warning-level issues are resolved before completing changes.
 9. **Documentation Currency (`AGENTS.md` & `README.md`):**
    - Keep `AGENTS.md` up to date. Update this document for any significant architectural decisions, component changes, or modifications that would otherwise leave the documentation inaccurate or misleading.
    - Update `README.md` in concert with any changes that affect user-facing features, configuration options, workflows, or supported behavior.

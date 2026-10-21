@@ -51,7 +51,7 @@ class ExternalLanguageResolverTest : BasePlatformTestCase() {
                 if (previousAlias.isNotEmpty()) {
                     Assert.assertTrue(
                         "Aliases under '$targetTypeName' must be sorted alphabetically: '$alias' should be after '$previousAlias'",
-                        alias.compareTo(previousAlias) > 0
+                        alias > previousAlias
                     )
                 }
                 previousAlias = alias

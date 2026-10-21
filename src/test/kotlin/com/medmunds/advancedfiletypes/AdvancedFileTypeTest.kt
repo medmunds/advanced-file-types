@@ -1,6 +1,9 @@
 package com.medmunds.advancedfiletypes
 
 import com.intellij.icons.AllIcons
+import com.intellij.notification.Notification
+import com.intellij.notification.Notifications
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.UnknownFileType
@@ -1178,6 +1181,17 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         AdvancedFileTypeSettings.notifyFileTypesChanged(project)
     }
 
+    private fun captureNotifications(): MutableList<Notification> {
+        val notifications = mutableListOf<Notification>()
+        val connection = project.messageBus.connect(testRootDisposable)
+        connection.subscribe(Notifications.TOPIC, object : Notifications {
+            override fun notify(notification: Notification) {
+                notifications.add(notification)
+            }
+        })
+        return notifications
+    }
+
     fun testMalformedXmlDeserializationWithInvalidTag() {
         val xml = """
             <AdvancedFileTypeSettings>
@@ -1190,13 +1204,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         """.trimIndent()
         val element = com.intellij.openapi.util.JDOMUtil.load(xml)
 
-        var notificationReceived: com.intellij.notification.Notification? = null
-        val connection = project.messageBus.connect(testRootDisposable)
-        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
-            override fun notify(notification: com.intellij.notification.Notification) {
-                notificationReceived = notification
-            }
-        })
+        val notifications = captureNotifications()
 
         settings.loadState(
             com.intellij.util.xmlb.XmlSerializer.deserialize(element, AdvancedFileTypeSettings.State::class.java)
@@ -1217,11 +1225,12 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         configurable.disposeUIResources()
 
         // Notification must have been published
-        Assert.assertNotNull("An error notification should be published on load error", notificationReceived)
-        Assert.assertEquals(com.intellij.notification.NotificationType.ERROR, notificationReceived?.type)
-        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.title"), notificationReceived?.title)
-        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.invalidConfig.content"), notificationReceived?.content)
-        val actions = notificationReceived!!.actions
+        Assert.assertEquals(1, notifications.size)
+        val notification = notifications[0]
+        Assert.assertEquals(NotificationType.ERROR, notification.type)
+        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.title"), notification.title)
+        Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.invalidConfig.content"), notification.content)
+        val actions = notification.actions
         Assert.assertEquals(2, actions.size)
         Assert.assertEquals(
             AdvancedFileTypesBundle.message("notification.settings.load.action.openSettings"),
@@ -1242,13 +1251,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         state.customLanguageMappings[""] = "HTML" // Invalid mapping
         state.customLanguageMappings["custom-lang"] = "JSON" // Valid mapping
 
-        var notificationReceived: com.intellij.notification.Notification? = null
-        val connection = project.messageBus.connect(testRootDisposable)
-        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
-            override fun notify(notification: com.intellij.notification.Notification) {
-                notificationReceived = notification
-            }
-        })
+        val notifications = captureNotifications()
 
         settings.loadState(state)
 
@@ -1259,8 +1262,8 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals("JSON", settings.state.customLanguageMappings["custom-lang"])
         Assert.assertNull(settings.state.customLanguageMappings[""])
 
-        Assert.assertNotNull("Notification should be published for malformed rules", notificationReceived)
-        Assert.assertEquals(com.intellij.notification.NotificationType.ERROR, notificationReceived?.type)
+        Assert.assertEquals(1, notifications.size)
+        Assert.assertEquals(NotificationType.ERROR, notifications[0].type)
     }
 
     fun testValidXmlLoadingDoesNotTriggerNotification() {
@@ -1268,17 +1271,11 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         state.rules.add(FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB))
         state.customLanguageMappings["custom-lang"] = "JSON"
 
-        var notificationReceived: com.intellij.notification.Notification? = null
-        val connection = project.messageBus.connect(testRootDisposable)
-        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
-            override fun notify(notification: com.intellij.notification.Notification) {
-                notificationReceived = notification
-            }
-        })
+        val notifications = captureNotifications()
 
         settings.loadState(state)
 
-        Assert.assertNull("No notification should be published when loading valid state", notificationReceived)
+        Assert.assertTrue("No notification should be published when loading valid state", notifications.isEmpty())
         Assert.assertEquals(1, settings.getRules().size)
     }
 
@@ -1287,19 +1284,13 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         state.rules.add(FileTypeOverrideRule("docs/*.txt", "NonExistentTypeA", PatternSyntax.GLOB))
         state.rules.add(FileTypeOverrideRule("src/*.txt", "NonExistentTypeB", PatternSyntax.GLOB))
 
-        val notifications = mutableListOf<com.intellij.notification.Notification>()
-        val connection = project.messageBus.connect(testRootDisposable)
-        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
-            override fun notify(notification: com.intellij.notification.Notification) {
-                notifications.add(notification)
-            }
-        })
+        val notifications = captureNotifications()
 
         settings.loadState(state)
 
         Assert.assertEquals(1, notifications.size)
         val notification = notifications[0]
-        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notification.type)
+        Assert.assertEquals(NotificationType.WARNING, notification.type)
         Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.title"), notification.title)
         Assert.assertTrue(notification.content.contains("NonExistentTypeA"))
         Assert.assertTrue(notification.content.contains("NonExistentTypeB"))
@@ -1317,18 +1308,12 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         state1.rules.add(FileTypeOverrideRule("docs/*.txt", "NonExistentTypeA", PatternSyntax.GLOB))
         state1.rules.add(FileTypeOverrideRule("src/*.txt", "NonExistentTypeB", PatternSyntax.GLOB))
 
-        val notifications = mutableListOf<com.intellij.notification.Notification>()
-        val connection = project.messageBus.connect(testRootDisposable)
-        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
-            override fun notify(notification: com.intellij.notification.Notification) {
-                notifications.add(notification)
-            }
-        })
+        val notifications = captureNotifications()
 
         // First load triggers warning
         settings.loadState(state1)
         Assert.assertEquals(1, notifications.size)
-        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notifications[0].type)
+        Assert.assertEquals(NotificationType.WARNING, notifications[0].type)
 
         // Second load with same unavailable types does NOT trigger another notification
         val state2 = AdvancedFileTypeSettings.State()
@@ -1345,7 +1330,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         settings.loadState(state3)
         Assert.assertEquals(2, notifications.size)
         val secondNotification = notifications[1]
-        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, secondNotification.type)
+        Assert.assertEquals(NotificationType.WARNING, secondNotification.type)
         Assert.assertTrue(secondNotification.content.contains("NonExistentTypeC"))
         Assert.assertFalse(secondNotification.content.contains("NonExistentTypeA"))
     }
@@ -1354,19 +1339,13 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         val state = AdvancedFileTypeSettings.State()
         state.customLanguageMappings["custom-lang"] = "NonExistentMappingType"
 
-        val notifications = mutableListOf<com.intellij.notification.Notification>()
-        val connection = project.messageBus.connect(testRootDisposable)
-        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
-            override fun notify(notification: com.intellij.notification.Notification) {
-                notifications.add(notification)
-            }
-        })
+        val notifications = captureNotifications()
 
         settings.loadState(state)
 
         Assert.assertEquals(1, notifications.size)
         val notification = notifications[0]
-        Assert.assertEquals(com.intellij.notification.NotificationType.WARNING, notification.type)
+        Assert.assertEquals(NotificationType.WARNING, notification.type)
         Assert.assertEquals(AdvancedFileTypesBundle.message("notification.settings.load.title"), notification.title)
         Assert.assertTrue(notification.content.contains("NonExistentMappingType"))
         Assert.assertEquals(1, notification.actions.size)
@@ -1377,19 +1356,13 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         state.rules.add(FileTypeOverrideRule("", "HTML", PatternSyntax.GLOB)) // Blank pattern -> Error
         state.rules.add(FileTypeOverrideRule("docs/*.txt", "NonExistentTypeX", PatternSyntax.GLOB)) // Unavailable type -> Warning
 
-        val notifications = mutableListOf<com.intellij.notification.Notification>()
-        val connection = project.messageBus.connect(testRootDisposable)
-        connection.subscribe(com.intellij.notification.Notifications.TOPIC, object : com.intellij.notification.Notifications {
-            override fun notify(notification: com.intellij.notification.Notification) {
-                notifications.add(notification)
-            }
-        })
+        val notifications = captureNotifications()
 
         settings.loadState(state)
 
         Assert.assertEquals(2, notifications.size)
-        val warning = notifications.find { it.type == com.intellij.notification.NotificationType.WARNING }
-        val error = notifications.find { it.type == com.intellij.notification.NotificationType.ERROR }
+        val warning = notifications.find { it.type == NotificationType.WARNING }
+        val error = notifications.find { it.type == NotificationType.ERROR }
         Assert.assertNotNull(warning)
         Assert.assertNotNull(error)
         Assert.assertTrue(warning!!.content.contains("NonExistentTypeX"))

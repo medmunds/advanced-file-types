@@ -216,9 +216,9 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
 
     private fun setResult(typeText: String, typeIcon: javax.swing.Icon? = null, detailText: String = "") {
         // Use NBSP for empty text to reserve height and prevent layout shifts
-        testResultCell.component.text = if (typeText.isBlank()) NBSP else typeText
+        testResultCell.component.text = typeText.ifBlank { NBSP }
         testResultCell.component.icon = typeIcon // TODO: somehow force height if null to avoid layout shifts
-        testResultCell.comment?.text = if (detailText.isBlank()) NBSP else detailText
+        testResultCell.comment?.text = detailText.ifBlank { NBSP }
     }
 
     private fun selectRule(rule: FileTypeOverrideRule) {
@@ -361,11 +361,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     override fun isModified(): Boolean {
         val settings = AdvancedFileTypeSettings.getInstance(project)
         val isGitAvailable = GitAttributesService.getInstance(project).isGitAvailable()
-        val gitModified = if (isGitAvailable) {
-            includeGitAttributesCheckBox.isSelected != settings.isLoadFromGitAttributes()
-        } else {
-            false
-        }
+        val gitModified = isGitAvailable && (includeGitAttributesCheckBox.isSelected != settings.isLoadFromGitAttributes())
         return rules != settings.getRules() 
             || includeVsCodeCheckBox.isSelected != settings.isLoadFromVsCodeSettings()
             || gitModified
