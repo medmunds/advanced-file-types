@@ -21,10 +21,12 @@ JetBrains IDEs natively support only global, project-agnostic file type associat
 
 ### Evaluation Hierarchy
 When resolving a file's type, rules are evaluated in the following strict order, stopping at the first match:
-1. **Custom Project Rules:** Configured in **Settings | Editor | File Types | Advanced File Types**, evaluated top-to-bottom.
-2. **VS Code Settings:** `.vscode/settings.json` (`files.associations`), if enabled.
-3. **Git Attributes:** `.gitattributes` (`linguist-language`), if enabled.
-4. **IDE Global Associations:** Default IntelliJ fallback (`Settings | Editor | File Types`).
+1. **Explicit IDE Overrides:** Native per-file overrides configured via **Override File Type** (`OverrideFileTypeManager`).
+2. **Advanced File Types Plugin Rules** in this order:
+    a. **Custom Project Rules:** Configured in **Settings | Editor | File Types | Advanced File Types**, evaluated top-to-bottom.
+    b. **VS Code Settings:** `.vscode/settings.json` (`files.associations`), if enabled.
+    c. **Git Attributes:** `.gitattributes` (`linguist-language`), if enabled.
+3. **IDE Global Associations:** Default IntelliJ fallback (`Settings | Editor | File Types`).
 
 ### Critical VFS vs PSI Architecture Rule
 * **`FileTypeOverrider` runs at the VFS level before PSI trees exist.**

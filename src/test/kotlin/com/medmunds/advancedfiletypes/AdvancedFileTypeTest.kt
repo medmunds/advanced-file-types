@@ -266,6 +266,99 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertNull("Unrelated help topic should not be resolved by this provider", otherTopicUrl)
     }
 
+    @Suppress("UnstableApiUsage") // Simulate user overrides via internal OverrideFileTypeManager
+    fun testOverrideFileTypeManagerTakesPrecedenceOverPluginRules() {
+        val xmlFileType = FileTypeManager.getInstance().findFileTypeByName("XML")!!
+        val htmlFileType = FileTypeManager.getInstance().findFileTypeByName("HTML")!!
+
+        val file = myFixture.addFileToProject("guide.txt", "content").virtualFile
+        settings.setRules(listOf(FileTypeOverrideRule("*.txt", "HTML", PatternSyntax.GLOB)))
+
+        // Initially matched by plugin rule
+        Assert.assertEquals(htmlFileType, overrider.getOverriddenFileType(file))
+        Assert.assertEquals("HTML", file.fileType.name)
+
+        val overrideManager = com.intellij.openapi.file.exclude.OverrideFileTypeManager.getInstance()
+        try {
+            // User applies explicit IDE "Override File Type"
+            val added = overrideManager.addFile(file, xmlFileType)
+            Assert.assertTrue("Override association should be added", added)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+
+            // File type resolution should prioritize explicit user per-file override
+            Assert.assertEquals("XML", file.fileType.name)
+
+            // User applies "Revert File Type Override"
+            val removed = overrideManager.removeFile(file)
+            Assert.assertTrue("Override association should be removed", removed)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+
+            // Plugin rule should resume taking effect
+            Assert.assertEquals("HTML", file.fileType.name)
+        } finally {
+            overrideManager.removeFile(file)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        }
+    }
+
+    @Suppress("UnstableApiUsage") // Simulate user overrides via internal OverrideFileTypeManager
+    fun testOverrideFileTypeManagerTakesPrecedenceOverVsCodeAssociations() {
+        val xmlFileType = FileTypeManager.getInstance().findFileTypeByName("XML")!!
+        val htmlFileType = FileTypeManager.getInstance().findFileTypeByName("HTML")!!
+
+        myFixture.addFileToProject(".vscode/settings.json", """{"files.associations": {"*.custom": "html"}}""")
+        settings.setLoadFromVsCodeSettings(true)
+        val file = myFixture.addFileToProject("file.custom", "content").virtualFile
+
+        Assert.assertEquals(htmlFileType, overrider.getOverriddenFileType(file))
+        Assert.assertEquals("HTML", file.fileType.name)
+
+        val overrideManager = com.intellij.openapi.file.exclude.OverrideFileTypeManager.getInstance()
+        try {
+            overrideManager.addFile(file, xmlFileType)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+
+            Assert.assertEquals("XML", file.fileType.name)
+
+            overrideManager.removeFile(file)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+
+            Assert.assertEquals("HTML", file.fileType.name)
+        } finally {
+            overrideManager.removeFile(file)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        }
+    }
+
+    @Suppress("UnstableApiUsage")
+    fun testOverrideFileTypeManagerTakesPrecedenceOverGitAttributes() {
+        val xmlFileType = FileTypeManager.getInstance().findFileTypeByName("XML")!!
+        val htmlFileType = FileTypeManager.getInstance().findFileTypeByName("HTML")!!
+
+        addGitAttributes("*.special linguist-language=HTML\n")
+        settings.setLoadFromGitAttributes(true)
+        val file = myFixture.addFileToProject("file.special", "content").virtualFile
+
+        Assert.assertEquals(htmlFileType, overrider.getOverriddenFileType(file))
+        Assert.assertEquals("HTML", file.fileType.name)
+
+        val overrideManager = com.intellij.openapi.file.exclude.OverrideFileTypeManager.getInstance()
+        try {
+            overrideManager.addFile(file, xmlFileType)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+
+            Assert.assertEquals("XML", file.fileType.name)
+
+            overrideManager.removeFile(file)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+
+            Assert.assertEquals("HTML", file.fileType.name)
+        } finally {
+            overrideManager.removeFile(file)
+            com.intellij.testFramework.PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        }
+    }
+
     fun testAddEditRuleDialogCreationAndRuleExtraction() {
         val rule = FileTypeOverrideRule("docs/*.txt", "HTML", PatternSyntax.GLOB)
         val dialog = com.medmunds.advancedfiletypes.ui.AddEditRuleDialog(project, rule)

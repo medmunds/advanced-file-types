@@ -59,7 +59,8 @@
                            displayType="STICKY_BALLOON"
                            bundle="messages.AdvancedFileTypesBundle"
                            key="notification.group.advancedFileTypes"/>
-        <fileTypeOverrider implementation="com.medmunds.advancedfiletypes.AdvancedFileTypeOverrider"/>
+        <fileTypeOverrider implementation="com.medmunds.advancedfiletypes.AdvancedFileTypeOverrider"
+                           order="last"/>
         <projectConfigurable parentId="preferences.fileTypes"
                              id="com.medmunds.advancedfiletypes.settings"
                              key="settings.displayName"
