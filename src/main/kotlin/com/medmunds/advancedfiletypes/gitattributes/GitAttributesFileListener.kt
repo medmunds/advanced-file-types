@@ -1,5 +1,6 @@
 package com.medmunds.advancedfiletypes.gitattributes
 
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.project.guessProjectDir
@@ -41,12 +42,18 @@ class GitAttributesFileListener : BulkFileListener {
             if (projectAffected) {
                 val settings = AdvancedFileTypeSettings.getInstance(project)
                 if (settings.isLoadFromGitAttributes()) {
+                    if (LOG.isDebugEnabled) {
+                        LOG.debug("Git attributes change detected for project '${project.name}'")
+                    }
                     shouldNotify = true
                 }
             }
         }
 
         if (shouldNotify) {
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Notifying file type changes following .gitattributes modification")
+            }
             AdvancedFileTypeSettings.notifyFileTypesChanged()
         }
     }
@@ -68,5 +75,9 @@ class GitAttributesFileListener : BulkFileListener {
         }
 
         return false
+    }
+
+    companion object {
+        private val LOG = Logger.getInstance(GitAttributesFileListener::class.java)
     }
 }

@@ -83,11 +83,15 @@ object ExternalLanguageResolver {
         val customTargetName = customMappings[trimmed]
         if (customTargetName != null) {
             val customFileType = fileTypeManager.findFileTypeByName(customTargetName)
-            return if (customFileType != null) {
+            val res = if (customFileType != null) {
                 Resolution.Resolved(customFileType)
             } else {
                 Resolution.Unsupported(customTargetName)
             }
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Resolved custom mapping '$trimmed' -> $res")
+            }
+            return res
         }
 
         // 2. Check static predefined alias map from resource.
@@ -95,11 +99,15 @@ object ExternalLanguageResolver {
         val staticTargetName = staticAliasMap[normalizedId]
         if (staticTargetName != null) {
             val fileType = fileTypeManager.findFileTypeByName(staticTargetName)
-            return if (fileType != null) {
+            val res = if (fileType != null) {
                 Resolution.Resolved(fileType)
             } else {
                 Resolution.Unsupported(staticTargetName)
             }
+            if (LOG.isDebugEnabled) {
+                LOG.debug("Resolved static mapping '$trimmed' ($staticTargetName) -> $res")
+            }
+            return res
         }
 
         // 3. Fallback: Search registered IntelliJ file types for unmapped external identifiers.
@@ -107,11 +115,15 @@ object ExternalLanguageResolver {
         // IntelliJ FileType name, display name, or language ID (such as new file types added by future
         // IDE plugins or releases) can resolve automatically. Results are cached to avoid repeated searches.
         val fallbackFileType = findRegisteredFileType(fileTypeManager, normalizedId)
-        return if (fallbackFileType != null) {
+        val res = if (fallbackFileType != null) {
             Resolution.Resolved(fallbackFileType)
         } else {
             Resolution.Unmapped
         }
+        if (LOG.isDebugEnabled) {
+            LOG.debug("Resolved fallback search for '$trimmed' -> $res")
+        }
+        return res
     }
 
     /**

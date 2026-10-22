@@ -1,5 +1,7 @@
 package com.medmunds.advancedfiletypes
 
+import com.intellij.openapi.diagnostic.ControlFlowException
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.impl.FileTypeOverrider
 import com.intellij.openapi.project.Project
@@ -29,11 +31,17 @@ class AdvancedFileTypeOverrider : FileTypeOverrider {
             isResolving.set(true)
             try {
                 val settings = AdvancedFileTypeSettings.getInstance(project)
-                settings.findMatchingFileType(file)
+                val matched = settings.findMatchingFileType(file)
+                if (matched != null && LOG.isDebugEnabled) {
+                    LOG.debug("Overriding file type for '${file.path}' with '${matched.name}' in project '${project.name}'")
+                }
+                matched
             } finally {
                 isResolving.set(false)
             }
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            if (e is ControlFlowException) throw e
+            LOG.warn("Unexpected error resolving overridden file type for '${file.path}': ${e.message}", e)
             null
         }
     }
@@ -45,7 +53,9 @@ class AdvancedFileTypeOverrider : FileTypeOverrider {
     internal fun findProjectForFile(file: VirtualFile): Project? {
         val openProjects = try {
             ProjectManager.getInstance().openProjects
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
+            if (e is ControlFlowException) throw e
+            LOG.warn("Unexpected error querying open projects: ${e.message}", e)
             return null
         }
         if (openProjects.isEmpty()) return null
@@ -80,5 +90,9 @@ class AdvancedFileTypeOverrider : FileTypeOverrider {
         }
 
         return bestProject
+    }
+
+    companion object {
+        private val LOG = Logger.getInstance(AdvancedFileTypeOverrider::class.java)
     }
 }

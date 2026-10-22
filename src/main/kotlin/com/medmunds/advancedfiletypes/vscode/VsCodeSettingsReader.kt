@@ -1,5 +1,7 @@
 package com.medmunds.advancedfiletypes.vscode
 
+import com.intellij.openapi.diagnostic.ControlFlowException
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.vfs.VfsUtilCore
@@ -14,6 +16,7 @@ data class VsCodeAssociation(
 
 object VsCodeSettingsReader {
 
+    private val LOG = Logger.getInstance(VsCodeSettingsReader::class.java)
     private val json5 = Json5()
 
     private data class CachedAssociations(
@@ -49,11 +52,16 @@ object VsCodeSettingsReader {
 
         val text = try {
             VfsUtilCore.loadText(settingsFile)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is ControlFlowException) throw e
+            LOG.warn("Failed to read .vscode/settings.json in project '${project.name}': ${e.message}")
             return emptyList()
         }
 
         val associations = parseAssociations(text)
+        if (LOG.isDebugEnabled) {
+            LOG.debug("Loaded ${associations.size} file association(s) from '$path' in project '${project.name}'")
+        }
         cache[path] = CachedAssociations(currentStamp, associations)
         return associations
     }
@@ -83,10 +91,16 @@ object VsCodeSettingsReader {
 
         try {
             val rootNode = json5.parse(jsonText) ?: return emptyList()
-            if (!rootNode.isJson5Object) return emptyList()
+            if (!rootNode.isJson5Object) {
+                LOG.warn("Root element in .vscode/settings.json is not a valid JSON5 object")
+                return emptyList()
+            }
 
             val associationsNode = rootNode.asJson5Object.get("files.associations") ?: return emptyList()
-            if (!associationsNode.isJson5Object) return emptyList()
+            if (!associationsNode.isJson5Object) {
+                LOG.warn("Value of 'files.associations' in .vscode/settings.json is not a JSON5 object")
+                return emptyList()
+            }
 
             val result = mutableListOf<VsCodeAssociation>()
             for ((pattern, langElem) in associationsNode.asJson5Object.asMap()) {
@@ -99,7 +113,8 @@ object VsCodeSettingsReader {
                 }
             }
             return result
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            LOG.warn("Failed to parse .vscode/settings.json: ${e.message}", e)
             return emptyList()
         }
     }

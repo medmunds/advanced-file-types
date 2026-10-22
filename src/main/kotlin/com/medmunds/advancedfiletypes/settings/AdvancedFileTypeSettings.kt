@@ -407,6 +407,8 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
         val virtualFile = settingsFile?.let { LocalFileSystem.getInstance().refreshAndFindFileByNioFile(it) }
         if (virtualFile != null) {
             FileEditorManager.getInstance(project).openFile(virtualFile, true)
+        } else {
+            LOG.warn("Could not find or open settings file at '$settingsFile' for project '${project.name}'")
         }
     }
 
