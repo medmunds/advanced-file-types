@@ -1,6 +1,7 @@
 package com.medmunds.advancedfiletypes.help
 
 import com.intellij.openapi.help.WebHelpProvider
+import com.medmunds.advancedfiletypes.BuildConfig
 
 class AdvancedFileTypeWebHelpProvider : WebHelpProvider() {
 
@@ -17,6 +18,6 @@ class AdvancedFileTypeWebHelpProvider : WebHelpProvider() {
     companion object {
         const val HELP_TOPIC_PREFIX = "com.medmunds.advancedfiletypes"
         const val HELP_TOPIC = "com.medmunds.advancedfiletypes.settings"
-        const val README_URL = "https://github.com/medmunds/advanced-file-types#readme"
+        const val README_URL = BuildConfig.README_URL
     }
 }

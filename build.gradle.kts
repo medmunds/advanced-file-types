@@ -116,3 +116,30 @@ tasks.processResources {
         into("META-INF")
     }
 }
+
+val generateBuildConfig = tasks.register("generateBuildConfig") {
+    val versionStr = project.version.toString()
+    val branch = if (versionStr.endsWith("-SNAPSHOT")) "main" else versionStr
+    val readmeUrl = "https://github.com/medmunds/advanced-file-types/blob/$branch/README.md#usage"
+
+    val outputDir = layout.buildDirectory.dir("generated/sources/buildconfig/kotlin/main")
+    outputs.dir(outputDir)
+
+    doLast {
+        val configFile = outputDir.get().file("com/medmunds/advancedfiletypes/BuildConfig.kt").asFile
+        configFile.parentFile.mkdirs()
+        configFile.writeText("""
+            package com.medmunds.advancedfiletypes
+
+            object BuildConfig {
+                const val README_URL = "$readmeUrl"
+            }
+        """.trimIndent())
+    }
+}
+
+kotlin {
+    sourceSets.main {
+        kotlin.srcDir(generateBuildConfig.map { it.outputs.files })
+    }
+}

@@ -260,7 +260,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertEquals(AdvancedFileTypeWebHelpProvider.HELP_TOPIC_PREFIX, provider.helpTopicPrefix)
 
         val resolvedUrl = provider.getHelpPageUrl(AdvancedFileTypeWebHelpProvider.HELP_TOPIC)
-        Assert.assertEquals(AdvancedFileTypeWebHelpProvider.README_URL, resolvedUrl)
+        Assert.assertEquals(BuildConfig.README_URL, resolvedUrl)
 
         val otherTopicUrl = provider.getHelpPageUrl("some.other.plugin.topic")
         Assert.assertNull("Unrelated help topic should not be resolved by this provider", otherTopicUrl)
