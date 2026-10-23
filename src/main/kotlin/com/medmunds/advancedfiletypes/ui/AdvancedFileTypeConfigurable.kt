@@ -77,7 +77,6 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                     if (dialog.showAndGet()) {
                         rules[selectedRow] = dialog.getRule()
                         tableModel.fireTableRowsUpdated(selectedRow, selectedRow)
-                        updateTestResult()
                     }
                 }
             }
@@ -147,7 +146,6 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             ?: rules.size
         rules.add(insertionIndex, rule)
         tableModel.fireTableRowsInserted(insertionIndex, insertionIndex)
-        updateTestResult()
         val insertedViewRow = table.convertRowIndexToView(insertionIndex)
         if (insertedViewRow >= 0) {
             table.clearSelection()
@@ -165,7 +163,6 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         if (selectedRows.isNotEmpty()) {
             selectedRows.forEach(rules::removeAt)
             tableModel.fireTableDataChanged()
-            updateTestResult()
         }
     }
 
@@ -226,7 +223,6 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                     if (dialog.showAndGet()) {
                         rules[row] = dialog.getRule()
                         tableModel.fireTableRowsUpdated(row, row)
-                        updateTestResult()
                         return true
                     }
                 }
@@ -402,7 +398,6 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         val settings = AdvancedFileTypeSettings.getInstance(project)
         rules.clear()
         rules.addAll(settings.getRules().map { it.copy() })
-        tableModel.fireTableDataChanged()
         includeVsCodeCheckBox.isSelected = settings.isLoadFromVsCodeSettings()
         val isGitAvailable = GitAttributesService.getInstance(project).isGitAvailable()
         if (isGitAvailable) {
@@ -412,7 +407,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             includeGitAttributesCheckBox.isEnabled = false
             includeGitAttributesCheckBox.isSelected = false
         }
-        updateTestResult()
+        tableModel.fireTableDataChanged()
     }
 
     override fun disposeUIResources() {

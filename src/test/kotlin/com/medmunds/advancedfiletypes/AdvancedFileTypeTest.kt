@@ -351,6 +351,30 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         }
     }
 
+    fun testTestPatternMatchingUpdatesAfterRuleInsertionAndRemoval() {
+        settings.setRules(listOf(
+            FileTypeOverrideRule("*.txt", "HTML", PatternSyntax.GLOB),
+            FileTypeOverrideRule("*.txt", "XML", PatternSyntax.GLOB)
+        ))
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        try {
+            configurable.testPathField.text = "sample.txt"
+            Assert.assertTrue(configurable.testResultCell.component.text.contains("HTML"))
+
+            configurable.addRule(FileTypeOverrideRule("*.txt", "XML", PatternSyntax.GLOB))
+            Assert.assertTrue(configurable.testResultCell.component.text.contains("XML"))
+
+            performDefaultToolbarAction(
+                ToolbarDecorator.findRemoveButton(configurable.tableDecoratorPanel!!)
+            )
+            Assert.assertTrue(configurable.testResultCell.component.text.contains("HTML"))
+        } finally {
+            configurable.disposeUIResources()
+        }
+    }
+
     fun testTestPatternMatchingUpdatesAfterDefaultMoveAction() {
         settings.setRules(listOf(
             FileTypeOverrideRule("*.txt", "HTML", PatternSyntax.GLOB),
