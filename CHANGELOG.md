@@ -8,8 +8,9 @@
 
 - Enabled JetBrains Marketplace reporting for plugin-attributed exceptions and IDE freezes.
 
-### Fixed
+### Changed
 
+- Adding a rule now inserts it before the first selected row.
 - Removing multiple selected rules now removes all selected rows.
 
 ## 0.2.0 - 2026-10-22

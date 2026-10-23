@@ -285,6 +285,45 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         }
     }
 
+    fun testAddRuleInsertsBeforeFirstSelectedRow() {
+        settings.setRules((0..3).map { index ->
+            FileTypeOverrideRule("rule$index", "HTML", PatternSyntax.GLOB)
+        })
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        try {
+            configurable.table.setRowSelectionInterval(1, 1)
+            configurable.table.addRowSelectionInterval(3, 3)
+
+            configurable.addRule(FileTypeOverrideRule("new-rule", "XML", PatternSyntax.GLOB))
+
+            Assert.assertEquals(
+                listOf("rule0", "new-rule", "rule1", "rule2", "rule3"),
+                tablePatterns(configurable)
+            )
+        } finally {
+            configurable.disposeUIResources()
+        }
+    }
+
+    fun testAddRuleAppendsWhenNothingIsSelected() {
+        settings.setRules(listOf(
+            FileTypeOverrideRule("rule0", "HTML", PatternSyntax.GLOB),
+            FileTypeOverrideRule("rule1", "HTML", PatternSyntax.GLOB)
+        ))
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        try {
+            configurable.addRule(FileTypeOverrideRule("new-rule", "XML", PatternSyntax.GLOB))
+
+            Assert.assertEquals(listOf("rule0", "rule1", "new-rule"), tablePatterns(configurable))
+        } finally {
+            configurable.disposeUIResources()
+        }
+    }
+
     fun testDefaultMoveActionsMoveMultipleSelectedRows() {
         settings.setRules((0..4).map { index ->
             FileTypeOverrideRule("rule$index", "HTML", PatternSyntax.GLOB)

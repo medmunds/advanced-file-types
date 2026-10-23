@@ -67,9 +67,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
             .setAddAction {
                 val dialog = AddEditRuleDialog(project, null)
                 if (dialog.showAndGet()) {
-                    rules.add(dialog.getRule())
-                    tableModel.fireTableRowsInserted(rules.size - 1, rules.size - 1)
-                    updateTestResult()
+                    addRule(dialog.getRule())
                 }
             }
             .setEditAction {
@@ -141,6 +139,15 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         this.rootPanel = component
         reset()
         return component
+    }
+
+    internal fun addRule(rule: FileTypeOverrideRule) {
+        val insertionIndex = table.selectedRows.firstOrNull()
+            ?.let(table::convertRowIndexToModel)
+            ?: rules.size
+        rules.add(insertionIndex, rule)
+        tableModel.fireTableRowsInserted(insertionIndex, insertionIndex)
+        updateTestResult()
     }
 
     internal fun removeSelectedRules() {
