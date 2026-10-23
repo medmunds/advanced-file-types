@@ -1,6 +1,6 @@
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
-import org.jetbrains.intellij.platform.gradle.models.ProductRelease
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
@@ -30,29 +30,17 @@ dependencies {
 
 intellijPlatform {
     pluginVerification {
+        // Default failures don't include DEPRECATED_API_USAGES.
+        // We want to fail on that and _nearly_ every other problem or warning.
+        failureLevel = VerifyPluginTask.FailureLevel.ALL.filterNot {
+            it == VerifyPluginTask.FailureLevel.EXPERIMENTAL_API_USAGES
+        }
+        // Silence "nonexisting 'classPath' elements in lib/modules/intellij.platform.*"
+        freeArgs = listOf("-missing-layout-classpath-file", "skip-silently")
+        // WebStorm is a smaller download than full IntellijIdea
         ides {
-            val isMinimal = providers.gradleProperty("minimalVerification")
-                .map { it.isEmpty() || it.toBoolean() }
-                .getOrElse(false)
-
-            if (isMinimal) {
-                // Verify only against the current target IDEA version (local development)
-                current()
-            } else {
-                // Verify against the full IDE matrix from minimum supported build through latest EAP
-                select {
-                    types = listOf(
-                        IntelliJPlatformType.IntellijIdea,
-                        // IntelliJPlatformType.PyCharm,
-                        // IntelliJPlatformType.RustRover,
-                        IntelliJPlatformType.WebStorm,
-                    )
-                    channels = listOf(
-                        ProductRelease.Channel.RELEASE,
-                        ProductRelease.Channel.EAP,
-                    )
-                    sinceBuild = "253"
-                }
+            select {
+                types = listOf(IntelliJPlatformType.WebStorm)
             }
         }
     }
