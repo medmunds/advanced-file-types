@@ -54,13 +54,14 @@
     <!-- Extensions defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
+        <errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
+        <fileTypeOverrider implementation="com.medmunds.advancedfiletypes.AdvancedFileTypeOverrider"
+                           order="last"/>
         <!--suppress PluginXmlCapitalization -->
         <notificationGroup id="com.medmunds.advancedfiletypes.settingsLoadErrors"
                            displayType="STICKY_BALLOON"
                            bundle="messages.AdvancedFileTypesBundle"
                            key="notification.group.advancedFileTypes"/>
-        <fileTypeOverrider implementation="com.medmunds.advancedfiletypes.AdvancedFileTypeOverrider"
-                           order="last"/>
         <projectConfigurable parentId="preferences.fileTypes"
                              id="com.medmunds.advancedfiletypes.settings"
                              key="settings.displayName"

@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Added
+
+- Enabled JetBrains Marketplace reporting for plugin-attributed exceptions and IDE freezes.
+
 ## 0.2.0 - 2026-10-22
 
 ### Added
