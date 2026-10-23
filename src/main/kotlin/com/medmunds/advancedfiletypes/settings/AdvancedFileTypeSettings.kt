@@ -12,7 +12,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.UnknownFileType
@@ -406,7 +406,7 @@ class AdvancedFileTypeSettings(private val project: Project) : PersistentStateCo
         val settingsFile = projectConfigDir?.resolve(SETTINGS_FILE_NAME)
         val virtualFile = settingsFile?.let { LocalFileSystem.getInstance().refreshAndFindFileByNioFile(it) }
         if (virtualFile != null) {
-            FileEditorManager.getInstance(project).openFile(virtualFile, true)
+            OpenFileDescriptor(project, virtualFile).navigate(true)
         } else {
             LOG.warn("Could not find or open settings file at '$settingsFile' for project '${project.name}'")
         }
