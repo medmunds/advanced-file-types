@@ -12,6 +12,7 @@ Using the plugin, you could…
 ## Contents
 
 * [Features](#features)
+* [Installation](#installation)
 * [Usage](#usage)
   * [Glob patterns](#glob-patterns)
   * [Regular expression patterns](#regular-expression-patterns)
@@ -41,6 +42,10 @@ Using the plugin, you could…
     <img alt="VS Code and gitattributes checkboxes" src="img/vscode-and-gitattributes.png" width="353">
   </picture>
 
+* **Commit and share settings:**
+  Project file types are saved in `.idea/advancedFileType.xml`
+  and can be checked into source control.
+
 * **Integrated pattern tester:**
     Easily verify rules and imported associations.
 
@@ -59,7 +64,7 @@ The **Advanced File Types** plugin should work with any JetBrains IDE version 20
 2. Search for **Advanced File Types** in the marketplace
 3. Click **Install**
 
-Alternatively, download the latest release from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35076-advanced-file-types).
+Or download the latest release from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35076-advanced-file-types).
 
 ## Usage
 
@@ -151,13 +156,16 @@ Any files outside the project root folder are handled by the IDE's global file t
 
 ## Why this plugin?
 
-JetBrains [**File Types**][file-types-setting] associations are global to all projects, allow only filename patterns (not path matching), and don't support prioritization of rules. This is insufficient for several real-world use cases. See these long-standing issues:
+Although powerful, JetBrains' standard [**File Types**][file-types-setting] associations don't cover several real-world use cases. The IDE's rules apply globally to all projects, support only filename patterns (not path matching), and can't be ordered by priority. See these YouTrack issues:
 
-* [IDEABKL-6335](https://youtrack.jetbrains.com/issue/IDEABKL-6335/Assign-file-types-not-only-globally-but-project-wide-as-well) "Assign file types not only globally but project-wide as well"
-* [IJPL-2316](https://youtrack.jetbrains.com/issue/IJPL-2316/Dynamic-File-Type-Patterns) "Dynamic File Type Patterns"
-* [IJPL-52980](https://youtrack.jetbrains.com/issue/IJPL-52980/File-Type-Association-should-use-REGEX-not-just-and-for-pattern-matching) "File Type Association should use REGEX not just * and ? for pattern matching"
-* [IJPL-3389](https://youtrack.jetbrains.com/issue/IJPL-3389/File-association-prioritization-for-multiple-matching-patterns) "File association prioritization for multiple matching patterns"
-* [IJPL-258202](https://youtrack.jetbrains.com/issue/IJPL-258202/File-type-associations-Honor-linguist-language-overrides-from-.gitattributes) "File type associations: Honor linguist-language overrides from .gitattributes"
+* [IDEABKL-6335](https://youtrack.jetbrains.com/issue/IDEABKL-6335): "Assign file types not only globally but project-wide as well"
+* [IDEABKL-7096](https://youtrack.jetbrains.com/issue/IDEABKL-7096): "Add ability to 'share' File Type associations as part of project config."
+* [IJPL-2316](https://youtrack.jetbrains.com/issue/IJPL-2316): "File type associations: Match file name patterns against the file path or per project"
+* [IJPL-3389](https://youtrack.jetbrains.com/issue/IJPL-3389): "File association prioritization for multiple matching patterns"
+* [IJPL-39352](https://youtrack.jetbrains.com/issue/IJPL-39352): "Add the possibility to store custom file types in .idea"
+* [IJPL-52980](https://youtrack.jetbrains.com/issue/IJPL-52980): "File Type Association should use REGEX not just * and ? for pattern matching"
+* [IJPL-52947](https://youtrack.jetbrains.com/issue/IJPL-52947): "Support extending file type settings in project level .idea config"
+* [IJPL-258202](https://youtrack.jetbrains.com/issue/IJPL-258202) "File type associations: Honor linguist-language overrides from .gitattributes"
 
 (JetBrains: please feel welcome to adopt, absorb, or otherwise obsolete this plugin!)
 
@@ -165,11 +173,18 @@ JetBrains [**File Types**][file-types-setting] associations are global to all pr
 
 ## Screenshots
 
-Here's the whole **Advanced File Types** settings:
+Here's the whole settings dialog with **Advanced File Types** open:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="img/settings-dialog_dark.png" width="900">
   <img alt="'Advanced File Types' settings panel" src="img/settings-dialog.png" width="900">
+</picture>
+
+And just its settings configuration panel:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/settings-panel_dark.png" width="655">
+  <img alt="'Advanced File Types' settings panel" src="img/settings-panel.png" width="655">
 </picture>
 
 ## Development

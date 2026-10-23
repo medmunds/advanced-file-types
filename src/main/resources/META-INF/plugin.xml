@@ -12,9 +12,10 @@
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
+    <!-- The first two lines are designed to (almost) fit in the plugin card. The extra space on line 2 is needed. -->
     <description><![CDATA[
-        Adds project-level file type overrides, using glob or regex with full path matching.
-        Can also load file types from VS Code settings and Git <code>linguist-language</code> attributes.
+        Adds project-level file types using glob or regex with full path matching.
+         Also loads types from VS Code settings and Git linguist attributes.
 
         <h2>Features</h2>
         <ul>
@@ -26,6 +27,9 @@
             <li><strong>VS Code and .gitattributes support:</strong>
                 Optionally load file type associations from <code>.vscode/settings.json</code>
                 and GitHub's <code>linguist-language</code> Git attributes.</li>
+            <li><strong>Commit and share settings:</strong>
+                Project file types are saved in <code>.idea/advancedFileType.xml</code>
+                and can be checked into source control.</li>
             <li><strong>Integrated pattern tester:</strong>
                 Easily verify rules and imported associations.</li>
             <li><strong>Free and open source:</strong>
