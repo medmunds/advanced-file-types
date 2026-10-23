@@ -16,6 +16,9 @@ on:
   # Trigger the workflow on any pull request
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -26,6 +29,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
 
       # Free GitHub Actions Environment Disk Space
@@ -35,6 +39,8 @@ jobs:
       # Check out the current repository
       - name: Fetch Sources
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Set up the Java environment for the next steps
       - name: Setup Java
@@ -63,6 +69,7 @@ jobs:
     name: Test
     needs: [ build ]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
 
       # Free GitHub Actions Environment Disk Space
@@ -72,6 +79,8 @@ jobs:
       # Check out the current repository
       - name: Fetch Sources
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Set up the Java environment for the next steps
       - name: Setup Java
@@ -103,6 +112,7 @@ jobs:
     name: Verify plugin
     needs: [ build ]
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
 
       # Free GitHub Actions Environment Disk Space
@@ -112,6 +122,8 @@ jobs:
       # Check out the current repository
       - name: Fetch Sources
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Set up the Java environment for the next steps
       - name: Setup Java
@@ -145,6 +157,7 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: [ build, test, verify ]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -152,6 +165,8 @@ jobs:
       # Check out the current repository
       - name: Fetch Sources
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Set up the Java environment for the next steps
       - name: Setup Java
