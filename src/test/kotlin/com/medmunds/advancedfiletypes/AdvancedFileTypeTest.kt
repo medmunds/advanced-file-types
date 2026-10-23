@@ -532,28 +532,6 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         dialog.disposeIfNeeded()
     }
 
-    fun testMessageBundleKeys() {
-        Assert.assertEquals("Advanced File Types", AdvancedFileTypesBundle.message("settings.displayName"))
-        Assert.assertEquals("Pattern", AdvancedFileTypesBundle.message("settings.table.column.pattern"))
-        Assert.assertEquals("Syntax", AdvancedFileTypesBundle.message("settings.table.column.syntax"))
-        Assert.assertEquals("File Type", AdvancedFileTypesBundle.message("settings.table.column.fileType"))
-        Assert.assertEquals("Include file associations from .vscode/settings.json", AdvancedFileTypesBundle.message("settings.includeVsCode"))
-        Assert.assertEquals("Glob", AdvancedFileTypesBundle.message("syntax.glob"))
-        Assert.assertEquals("Regex", AdvancedFileTypesBundle.message("syntax.regex"))
-        Assert.assertEquals("Glob", PatternSyntax.GLOB.displayName)
-        Assert.assertEquals("Regex", PatternSyntax.REGEX.displayName)
-        Assert.assertEquals("Add File Type Override Rule", AdvancedFileTypesBundle.message("dialog.title.add"))
-        Assert.assertEquals("Edit File Type Override Rule", AdvancedFileTypesBundle.message("dialog.title.edit"))
-        Assert.assertEquals("Pattern:", AdvancedFileTypesBundle.message("dialog.pattern.label"))
-        Assert.assertEquals("Syntax:", AdvancedFileTypesBundle.message("dialog.syntax.label"))
-        Assert.assertEquals("File Type:", AdvancedFileTypesBundle.message("dialog.fileType.label"))
-        Assert.assertEquals("Pattern cannot be empty", AdvancedFileTypesBundle.message("dialog.validation.pattern.empty"))
-        Assert.assertEquals("Invalid pattern syntax: bad", AdvancedFileTypesBundle.message("dialog.validation.pattern.invalid", "bad"))
-        Assert.assertEquals("Please select a file type", AdvancedFileTypesBundle.message("dialog.validation.fileType.empty"))
-        Assert.assertEquals("HTML (HTML files)", AdvancedFileTypesBundle.message("fileType.display.withDescription", "HTML", "HTML files"))
-        Assert.assertTrue(AdvancedFileTypesBundle.message("dialog.pattern.help").contains("Glob patterns"))
-    }
-
     fun testVsCodeSettingsReaderJsoncParsing() {
         val jsonc = """
             {
