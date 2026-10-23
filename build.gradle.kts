@@ -43,9 +43,9 @@ intellijPlatform {
                 select {
                     types = listOf(
                         IntelliJPlatformType.IntellijIdea,
-                        IntelliJPlatformType.PyCharm,
+                        // IntelliJPlatformType.PyCharm,
+                        // IntelliJPlatformType.RustRover,
                         IntelliJPlatformType.WebStorm,
-                        IntelliJPlatformType.RustRover,
                     )
                     channels = listOf(
                         ProductRelease.Channel.RELEASE,
