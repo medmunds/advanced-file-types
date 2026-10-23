@@ -148,6 +148,11 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         rules.add(insertionIndex, rule)
         tableModel.fireTableRowsInserted(insertionIndex, insertionIndex)
         updateTestResult()
+        val insertedViewRow = table.convertRowIndexToView(insertionIndex)
+        if (insertedViewRow >= 0) {
+            table.clearSelection()
+            table.setRowSelectionInterval(insertedViewRow, insertedViewRow)
+        }
     }
 
     internal fun removeSelectedRules() {

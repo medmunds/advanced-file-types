@@ -302,6 +302,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
                 listOf("rule0", "new-rule", "rule1", "rule2", "rule3"),
                 tablePatterns(configurable)
             )
+            Assert.assertEquals(listOf(1), configurable.table.selectedRows.toList())
         } finally {
             configurable.disposeUIResources()
         }
@@ -319,6 +320,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
             configurable.addRule(FileTypeOverrideRule("new-rule", "XML", PatternSyntax.GLOB))
 
             Assert.assertEquals(listOf("rule0", "rule1", "new-rule"), tablePatterns(configurable))
+            Assert.assertEquals(listOf(2), configurable.table.selectedRows.toList())
         } finally {
             configurable.disposeUIResources()
         }
