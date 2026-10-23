@@ -84,12 +84,7 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
                 }
             }
             .setRemoveAction {
-                val selectedRow = table.selectedRow
-                if (selectedRow in rules.indices) {
-                    rules.removeAt(selectedRow)
-                    tableModel.fireTableRowsDeleted(selectedRow, selectedRow)
-                    updateTestResult()
-                }
+                removeSelectedRules()
             }
             .createPanel()
 
@@ -146,6 +141,20 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
         this.rootPanel = component
         reset()
         return component
+    }
+
+    internal fun removeSelectedRules() {
+        val selectedRows = table.selectedRows
+            .map { table.convertRowIndexToModel(it) }
+            .filter { it in rules.indices }
+            .distinct()
+            .sortedDescending()
+
+        if (selectedRows.isNotEmpty()) {
+            selectedRows.forEach(rules::removeAt)
+            tableModel.fireTableDataChanged()
+            updateTestResult()
+        }
     }
 
     private fun setupTable() {

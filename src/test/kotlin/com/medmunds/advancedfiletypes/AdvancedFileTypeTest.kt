@@ -4,12 +4,19 @@ import com.intellij.icons.AllIcons
 import com.intellij.notification.Notification
 import com.intellij.notification.Notifications
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionUiKind
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.UnknownFileType
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.AnActionButton
+import com.intellij.ui.ToolbarDecorator
 import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
 import com.medmunds.advancedfiletypes.model.FileTypeOverrideRule
@@ -253,6 +260,96 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertFalse("Configurable should not be modified after reset", configurable.isModified())
 
         configurable.disposeUIResources()
+    }
+
+    fun testCustomRemoveActionRemovesDisjointSelectedRows() {
+        settings.setRules((0..4).map { index ->
+            FileTypeOverrideRule("rule$index", "HTML", PatternSyntax.GLOB)
+        })
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        try {
+            configurable.table.setRowSelectionInterval(0, 0)
+            configurable.table.addRowSelectionInterval(2, 2)
+            configurable.table.addRowSelectionInterval(4, 4)
+
+            performDefaultToolbarAction(
+                ToolbarDecorator.findRemoveButton(configurable.tableDecoratorPanel!!)
+            )
+
+            Assert.assertEquals(2, configurable.table.rowCount)
+            Assert.assertEquals(listOf("rule1", "rule3"), tablePatterns(configurable))
+        } finally {
+            configurable.disposeUIResources()
+        }
+    }
+
+    fun testDefaultMoveActionsMoveMultipleSelectedRows() {
+        settings.setRules((0..4).map { index ->
+            FileTypeOverrideRule("rule$index", "HTML", PatternSyntax.GLOB)
+        })
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        try {
+            configurable.table.setRowSelectionInterval(1, 1)
+            configurable.table.addRowSelectionInterval(3, 3)
+            performDefaultToolbarAction(
+                ToolbarDecorator.findUpButton(configurable.tableDecoratorPanel!!)
+            )
+
+            Assert.assertEquals(listOf("rule1", "rule0", "rule3", "rule2", "rule4"), tablePatterns(configurable))
+
+            performDefaultToolbarAction(
+                ToolbarDecorator.findDownButton(configurable.tableDecoratorPanel!!)
+            )
+            Assert.assertEquals(listOf("rule0", "rule1", "rule2", "rule3", "rule4"), tablePatterns(configurable))
+        } finally {
+            configurable.disposeUIResources()
+        }
+    }
+
+    fun testTestPatternMatchingUpdatesAfterDefaultMoveAction() {
+        settings.setRules(listOf(
+            FileTypeOverrideRule("*.txt", "HTML", PatternSyntax.GLOB),
+            FileTypeOverrideRule("*.txt", "XML", PatternSyntax.GLOB)
+        ))
+
+        val configurable = AdvancedFileTypeConfigurable(project)
+        configurable.createComponent()
+        try {
+            configurable.testPathField.text = "sample.txt"
+            Assert.assertTrue(configurable.testResultCell.component.text.contains("HTML"))
+
+            configurable.table.setRowSelectionInterval(0, 0)
+            performDefaultToolbarAction(
+                ToolbarDecorator.findDownButton(configurable.tableDecoratorPanel!!)
+            )
+
+            Assert.assertTrue(configurable.testResultCell.component.text.contains("XML"))
+            Assert.assertEquals(1, configurable.table.selectedRow)
+        } finally {
+            configurable.disposeUIResources()
+        }
+    }
+
+    private fun tablePatterns(configurable: AdvancedFileTypeConfigurable): List<String> =
+        (0 until configurable.table.rowCount).map { configurable.table.getValueAt(it, 0) as String }
+
+    private fun performDefaultToolbarAction(button: AnActionButton?) {
+        Assert.assertNotNull("Table decorator should provide the requested default action", button)
+        val action = button!!
+        val dataContext = DataContext.EMPTY_CONTEXT
+        val event = AnActionEvent.createEvent(
+            action,
+            dataContext,
+            null,
+            ActionPlaces.UNKNOWN,
+            ActionUiKind.NONE,
+            null
+        )
+        ActionUtil.performAction(action, event)
     }
 
     fun testWebHelpProviderResolvesHelpUrl() {
