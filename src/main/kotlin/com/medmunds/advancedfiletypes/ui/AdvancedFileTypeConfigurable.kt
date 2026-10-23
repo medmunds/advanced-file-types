@@ -13,6 +13,7 @@ import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.EditableModel
+import com.intellij.util.ui.EmptyIcon
 import com.medmunds.advancedfiletypes.AdvancedFileTypesBundle
 import com.medmunds.advancedfiletypes.gitattributes.GitAttributesService
 import com.medmunds.advancedfiletypes.help.AdvancedFileTypeWebHelpProvider
@@ -232,10 +233,18 @@ class AdvancedFileTypeConfigurable(private val project: Project) : SearchableCon
     }
 
     private fun setResult(typeText: String, typeIcon: javax.swing.Icon? = null, detailText: String = "") {
-        // Use NBSP for empty text to reserve height and prevent layout shifts
+        // To prevent layout shifts, reserve height by:
+        // - Using NBSP in place of empty text
+        // - Ensuring comment includes `<code>` (which may have a different height)
+        // - Using an empty icon as a placeholder (size 16x16 per
+        //   https://plugins.jetbrains.com/docs/intellij/icons-style.html#grid-and-size)
         testResultCell.component.text = typeText.ifBlank { NBSP }
-        testResultCell.component.icon = typeIcon // TODO: somehow force height if null to avoid layout shifts
-        testResultCell.comment?.text = detailText.ifBlank { NBSP }
+        testResultCell.component.icon = typeIcon ?: EmptyIcon.ICON_16
+        testResultCell.comment?.text = when {
+            detailText.isBlank() -> "${NBSP}<code>${NBSP}</code>"
+            "<code>" in detailText -> detailText
+            else -> "$detailText<code>${NBSP}</code>"
+        }
     }
 
     private fun selectRule(rule: FileTypeOverrideRule) {

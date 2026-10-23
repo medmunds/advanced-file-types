@@ -844,7 +844,7 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         Assert.assertNotNull(component)
 
         val typeLabel = configurable.testResultCell.component
-        val detailLabel = configurable.testResultCell.comment
+        val detailLabel = configurable.testResultCell.comment ?: error("Pattern tester should have a detail label")
 
         // Test matched state: type label shows file type with icon, detail label shows match info
         val htmlType = FileTypeManager.getInstance().findFileTypeByName("HTML")
@@ -852,7 +852,9 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         configurable.updateTestResult()
         Assert.assertTrue("Type label should show HTML", typeLabel.text.contains("HTML"))
         Assert.assertEquals(htmlType?.icon, typeLabel.icon)
-        Assert.assertTrue("Detail label should contain pattern", (detailLabel?.text ?: "").contains("docs/*.txt"))
+        Assert.assertTrue("Detail label should contain pattern", detailLabel.text.contains("docs/*.txt"))
+        val matchedTypeHeight = typeLabel.preferredSize.height
+        val matchedDetailHeight = detailLabel.preferredSize.height
 
         // Test unmatched state: type label shows IDE default, detail label shows no override or global type matched
         val defaultUnknownType = FileTypeManager.getInstance().getFileTypeByFileName("file.abc")
@@ -860,7 +862,9 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         configurable.updateTestResult()
         Assert.assertEquals(FileTypeDisplayHelper.displayText(defaultUnknownType), typeLabel.text)
         Assert.assertEquals(FileTypeDisplayHelper.iconFor(defaultUnknownType), typeLabel.icon)
-        Assert.assertTrue("Detail label should indicate no override or global match", (detailLabel?.text ?: "").contains("No match in overrides or global", true))
+        Assert.assertTrue("Detail label should indicate no override or global match", detailLabel.text.contains("No match in overrides or global", true))
+        Assert.assertEquals(matchedTypeHeight, typeLabel.preferredSize.height)
+        Assert.assertEquals(matchedDetailHeight, detailLabel.preferredSize.height)
 
         // Test unmatched state for standard known file type (e.g., HTML)
         val defaultHtmlType = FileTypeManager.getInstance().getFileTypeByFileName("index.html")
@@ -868,15 +872,19 @@ class AdvancedFileTypeTest : BasePlatformTestCase() {
         configurable.updateTestResult()
         Assert.assertEquals(FileTypeDisplayHelper.displayText(defaultHtmlType), typeLabel.text)
         Assert.assertEquals(FileTypeDisplayHelper.iconFor(defaultHtmlType), typeLabel.icon)
-        Assert.assertTrue("Detail label should indicate matched global file types", (detailLabel?.text ?: "").contains("Matched global file types", true))
+        Assert.assertTrue("Detail label should indicate matched global file types", detailLabel.text.contains("Matched global file types", true))
+        Assert.assertEquals(matchedTypeHeight, typeLabel.preferredSize.height)
+        Assert.assertEquals(matchedDetailHeight, detailLabel.preferredSize.height)
 
         // Test empty path clears both labels (uses NBSP to prevent layout shifts)
         configurable.testPathField.text = ""
         configurable.updateTestResult()
         Assert.assertEquals("\u00A0", typeLabel.text)
-        Assert.assertNull(typeLabel.icon)
-        // Detail label is cleared to NBSP; the DSL comment label wraps it in HTML with CSS styles
-        Assert.assertTrue("Detail label should contain NBSP entity", (detailLabel?.text ?: "").contains("&#160;"))
+        Assert.assertNotNull(typeLabel.icon)
+        Assert.assertEquals(matchedTypeHeight, typeLabel.preferredSize.height)
+        Assert.assertEquals(matchedDetailHeight, detailLabel.preferredSize.height)
+        // The DSL comment label wraps the code-styled NBSP in HTML with CSS styles
+        Assert.assertTrue("Detail label should contain NBSP entity", detailLabel.text.contains("&#160;"))
 
         configurable.disposeUIResources()
     }
