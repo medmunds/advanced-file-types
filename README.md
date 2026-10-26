@@ -189,16 +189,19 @@ And just its settings configuration panel:
 
 ## Development
 
-To install the latest development build:
-* Download `advanced-file-types-<version>.zip` from GitHub's [releases]
-* Install it under **Settings | Plugins | ⚙️ | Install plugin from disk** (see JetBrains [managing plugins][install-plugin-from-disk] docs)
+To install an unreleased development build:
+* Download `advanced-file-types-<version>.zip` from the latest [Build workflow run][builds] (look for the *Artifacts* section at the end of the run's results)
+* Install the plugin zip in your IDE under **Settings | Plugins | ⚙️ | Install plugin from disk** (see JetBrains [managing plugins][install-plugin-from-disk] docs)
+
+You can also download released versions from GitHub's [releases] page and install them the same way.
 
 To build locally:
 * Clone the repository
 * Run `./gradlew check` to run the tests
 * Run `./gradlew buildPlugin` to build the plugin
-* In your IDE, use **Settings | Plugins | ⚙️ | Install plugin from disk** and select `build/distributions/advanced-file-types-<version>.zip` from your local build.
+* In your IDE, use **Settings | Plugins | ⚙️ | Install plugin from disk** and select `build/distributions/advanced-file-types-<version>.zip` from your local build
 
+[builds]: https://github.com/medmunds/advanced-file-types/actions/workflows/build.yml
 [releases]: https://github.com/medmunds/advanced-file-types/releases
 [install-plugin-from-disk]: https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk
 
